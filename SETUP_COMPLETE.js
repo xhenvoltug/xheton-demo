@@ -95,11 +95,11 @@
  */
 
 export const SETUP_INFO = {
-  version: '0.0.001',
+  version: '0.0.014',
   status: 'Ready',
   pages: 11,
   components: 15,
   libraries: 14,
   timestamp: '2025-12-06',
-  developer: 'Xhenvolt Technologies'
+  developer: 'Xhenvolt Uganda'
 };

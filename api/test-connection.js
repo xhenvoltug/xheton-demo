@@ -3,7 +3,7 @@
 // Run: node test-connection.js
 // =====================================================
 
-require('dotenv').config({ path: '../database/.env' });
+require('dotenv').config();
 const db = require('../database/config');
 
 async function runTests() {
