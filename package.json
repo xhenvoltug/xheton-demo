@@ -1,12 +1,14 @@
 {
   "name": "xheton",
-  "version": "0.0.014",
+  "version": "0.0.017",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:db": "node scripts/test-db.js"
+    "test:db": "node test-db-connection.js",
+    "test:neon": "node test-neon-connection.js",
+    "dev:test": "npm run dev & sleep 5 && npm run test:db"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.19",
@@ -26,10 +28,13 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-pdf/renderer": "^4.3.1",
     "@tanstack/react-query": "^5.90.12",
+    "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cookie": "^1.1.1",
     "dotenv": "^17.2.3",
     "framer-motion": "^12.23.25",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.556.0",
     "next": "16.0.7",
     "pg": "^8.16.3",
@@ -38,6 +43,7 @@
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.68.0",
     "react-hot-toast": "^2.6.0",
+    "react-is": "^19.2.1",
     "recharts": "^3.5.1",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.1.13",

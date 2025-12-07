@@ -1,20 +1,28 @@
 // =====================================================
 // Database Configuration for Next.js 16 App Router
-// PostgreSQL connection with connection pooling
+// PostgreSQL connection with Neon (primary) and local fallback
 // =====================================================
 
 import { Pool } from 'pg';
 
 // Environment variables configuration
 const config = {
-  // Primary Database Configuration
-  primary: {
+  // Primary Database Configuration (Neon)
+  primary: process.env.DATABASE_URL ? {
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false // Required for Neon
+    },
+    max: parseInt(process.env.DB_POOL_SIZE || '20'),
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+  } : {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),
     database: process.env.DB_NAME || 'xheton_db',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-    max: parseInt(process.env.DB_POOL_SIZE || '20'), // Connection pool size
+    user: process.env.DB_USER || 'xhenvolt',
+    password: process.env.DB_PASSWORD || '',
+    max: parseInt(process.env.DB_POOL_SIZE || '20'),
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
   },
@@ -23,9 +31,9 @@ const config = {
   fallback: {
     host: process.env.DB_FALLBACK_HOST || 'localhost',
     port: parseInt(process.env.DB_FALLBACK_PORT || '5432'),
-    database: process.env.DB_FALLBACK_NAME || 'xheton_local_db',
-    user: process.env.DB_FALLBACK_USER || 'postgres',
-    password: process.env.DB_FALLBACK_PASSWORD || 'postgres',
+    database: process.env.DB_FALLBACK_NAME || 'xheton_db',
+    user: process.env.DB_FALLBACK_USER || 'xhenvolt',
+    password: process.env.DB_FALLBACK_PASSWORD || 'xhenvolt123',
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
@@ -45,15 +53,15 @@ function initPrimaryPool() {
     primaryPool = new Pool(config.primary);
     
     primaryPool.on('error', (err) => {
-      console.error('Primary database pool error:', err);
+      console.error('❌ Primary database (Neon) pool error:', err.message);
       // Automatically switch to fallback on critical errors
-      if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+      if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
         switchToFallback();
       }
     });
     
     primaryPool.on('connect', () => {
-      console.log('✅ Connected to primary database');
+      console.log('✅ Connected to primary database (Neon)');
     });
   }
   
@@ -68,11 +76,11 @@ function initFallbackPool() {
     fallbackPool = new Pool(config.fallback);
     
     fallbackPool.on('error', (err) => {
-      console.error('Fallback database pool error:', err);
+      console.error('❌ Fallback database (Local) pool error:', err.message);
     });
     
     fallbackPool.on('connect', () => {
-      console.log('✅ Connected to fallback database');
+      console.log('✅ Connected to fallback database (Local PostgreSQL)');
     });
   }
   
@@ -83,7 +91,7 @@ function initFallbackPool() {
  * Switch to fallback database
  */
 function switchToFallback() {
-  console.warn('⚠️ Switching to fallback database...');
+  console.warn('⚠️ Primary database (Neon) unavailable. Switching to fallback (Local)...');
   currentPool = 'fallback';
   initFallbackPool();
 }
@@ -92,7 +100,7 @@ function switchToFallback() {
  * Switch back to primary database
  */
 function switchToPrimary() {
-  console.log('🔄 Switching to primary database...');
+  console.log('🔄 Switching back to primary database (Neon)...');
   currentPool = 'primary';
   initPrimaryPool();
 }
@@ -124,18 +132,27 @@ export async function query(text, params) {
     
     // Log slow queries (> 1 second)
     if (duration > 1000) {
-      console.warn(`⚠️ Slow query (${duration}ms):`, text);
+      console.warn(`⚠️ Slow query (${duration}ms):`, text.substring(0, 100));
     }
     
     return res;
   } catch (error) {
-    console.error('Database query error:', error);
+    console.error('❌ Database query error:', error.message);
     
-    // Try fallback if primary fails
-    if (currentPool === 'primary') {
-      console.log('🔄 Retrying with fallback database...');
+    // Try fallback if primary fails with connection errors
+    if (currentPool === 'primary' && 
+        (error.code === 'ECONNREFUSED' || 
+         error.code === 'ETIMEDOUT' || 
+         error.code === 'ENOTFOUND' ||
+         error.message?.includes('connect'))) {
+      console.log('🔄 Retrying with fallback database (Local)...');
       switchToFallback();
-      return await getPool().query(text, params);
+      try {
+        return await getPool().query(text, params);
+      } catch (fallbackError) {
+        console.error('❌ Fallback database also failed:', fallbackError.message);
+        throw fallbackError;
+      }
     }
     
     throw error;

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, ShoppingCart, Package, ShoppingBag, 
   CreditCard, Warehouse, Receipt, TrendingUp, Settings,
@@ -471,10 +471,56 @@ function NavGroup({ item, pathname, isOpen, onToggle }) {
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [openGroup, setOpenGroup] = useState(null);
+  const [user, setUser] = useState(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Fetch user info on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/user/me');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setUser(data.user);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      const response = await fetch('/api/user/signout', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const handleGroupToggle = (groupName) => {
     setOpenGroup(openGroup === groupName ? null : groupName);
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user?.fullName) return 'U';
+    return user.fullName
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -493,7 +539,7 @@ export default function DashboardLayout({ children }) {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
                 XHETON
               </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">v0.0.011</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">v0.0.013</p>
             </div>
           </div>
           
@@ -605,20 +651,49 @@ export default function DashboardLayout({ children }) {
                 <button className="flex items-center gap-x-2 text-sm font-semibold leading-6 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 px-3 py-2 rounded-lg transition-colors">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/avatar.png" />
-                    <AvatarFallback className="bg-emerald-600 text-white">AD</AvatarFallback>
+                    <AvatarFallback className="bg-emerald-600 text-white">
+                      {getUserInitials()}
+                    </AvatarFallback>
                   </Avatar>
-                  <span className="hidden lg:block">Admin User</span>
+                  <div className="hidden lg:block text-left">
+                    <div className="font-semibold">{user?.fullName || 'Loading...'}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                      {user?.email || ''}
+                    </div>
+                  </div>
                   <ChevronDown className="h-4 w-4 hidden lg:block" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">{user?.fullName || 'User'}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email || ''}</p>
+                  </div>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Keyboard shortcuts</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/profile" className="cursor-pointer">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/password" className="cursor-pointer">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Change Password
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/system" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    System Settings
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Sign out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 dark:text-red-400">
+                  Sign out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

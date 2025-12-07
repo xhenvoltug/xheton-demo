@@ -17,8 +17,8 @@ export async function GET(request) {
     const offset = parseInt(searchParams.get('offset')) || 0;
     
     const result = await query(
-      `SELECT user_id, username, email, first_name, last_name, 
-              role, status, created_at, last_login 
+      `SELECT id, username, email, first_name, last_name, 
+              role_id, is_active, created_at, last_login_at 
        FROM users 
        ORDER BY created_at DESC 
        LIMIT $1 OFFSET $2`,
@@ -30,7 +30,7 @@ export async function GET(request) {
     
     return NextResponse.json({
       success: true,
-      data: result.rows,
+      users: result.rows,
       pagination: {
         limit,
         offset,

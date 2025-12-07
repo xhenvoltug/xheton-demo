@@ -103,9 +103,9 @@ export default function LandingPage() {
               <a href="#features" className="text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Features</a>
               <a href="#about" className="text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">About</a>
               <Link href="/pricing" className="text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Pricing</Link>
-              <Link href="/dashboard">
+              <Link href="/auth/signup">
                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg">
-                  Try Demo
+                  Start Free Trial
                 </Button>
               </Link>
             </div>
@@ -145,7 +145,7 @@ export default function LandingPage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/dashboard">
+              <Link href="/auth/signup">
                 <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white text-lg px-8 py-6 shadow-2xl hover:shadow-emerald-500/50 transition-all duration-300">
                   Start Free Trial
                   <ArrowRight className="ml-2 w-5 h-5" />
@@ -336,9 +336,9 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Link href="/dashboard">
+              <Link href="/auth/signup">
                 <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 border-white text-white hover:bg-white/10">
-                  Try Demo
+                  Start Free Trial
                 </Button>
               </Link>
             </div>
@@ -365,7 +365,7 @@ export default function LandingPage() {
               <ul className="space-y-2 text-gray-400">
                 <li><a href="#features" className="hover:text-emerald-400 transition-colors">Features</a></li>
                 <li><Link href="/pricing" className="hover:text-emerald-400 transition-colors">Pricing</Link></li>
-                <li><Link href="/dashboard" className="hover:text-emerald-400 transition-colors">Demo</Link></li>
+                <li><Link href="/auth/signup" className="hover:text-emerald-400 transition-colors">Get Started</Link></li>
               </ul>
             </div>
             

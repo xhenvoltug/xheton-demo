@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,6 +74,53 @@ const itemVariants = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+
+  useEffect(() => {
+    // Check subscription status on mount
+    const checkStatus = async () => {
+      try {
+        const response = await fetch('/api/auth/check-status');
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          // If unauthorized or check failed, redirect based on API response
+          if (data.redirectTo) {
+            router.push(data.redirectTo);
+          } else {
+            router.push('/auth/login');
+          }
+          return;
+        }
+
+        // If API says success, we have access - show dashboard
+        setSubscriptionStatus(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error checking status:', error);
+        router.push('/auth/login');
+      }
+    };
+
+    checkStatus();
+  }, [router]);
+
+  // Show loading state while checking subscription
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <motion.div 
