@@ -1,0 +1,196 @@
+
+> xheton@0.0.013 build
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /home/xhenvolt/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /home/xhenvolt/projects/xheton/package-lock.json
+
+   ▲ Next.js 16.0.7 (Turbopack)
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 73s
+   Running TypeScript ...
+   Collecting page data using 3 workers ...
+   Generating static pages using 3 workers (0/153) ...
+   Generating static pages using 3 workers (38/153) 
+   Generating static pages using 3 workers (76/153) 
+   Generating static pages using 3 workers (114/153) 
+ ✓ Generating static pages using 3 workers (153/153) in 8.2s
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /accounting/coa
+├ ○ /accounting/journals
+├ ○ /accounting/statements
+├ ○ /accounts
+├ ƒ /accounts/[id]
+├ ○ /accounts/new
+├ ○ /accounts/transactions
+├ ○ /analytics
+├ ○ /analytics/dashboard
+├ ○ /analytics/forecast
+├ ○ /assets/depreciation
+├ ○ /assets/disposal
+├ ○ /assets/maintenance
+├ ○ /assets/register
+├ ○ /assets/transfers
+├ ○ /audit/events
+├ ○ /audit/logs
+├ ○ /audit/security
+├ ○ /audit/sessions
+├ ○ /automation/builder
+├ ○ /automation/dashboard
+├ ○ /automation/logs
+├ ○ /automation/templates
+├ ○ /budgeting/expenses
+├ ○ /budgeting/overview
+├ ○ /budgeting/payments
+├ ○ /budgeting/planner
+├ ○ /budgeting/reports
+├ ○ /communication/announcements
+├ ○ /communication/chat
+├ ○ /communication/contacts
+├ ○ /communication/email
+├ ○ /credit/customers
+├ ○ /credit/suppliers
+├ ○ /crm/activities
+├ ○ /crm/leads
+├ ○ /crm/opportunities
+├ ○ /crm/sources
+├ ○ /customers
+├ ƒ /customers/[id]
+├ ○ /customers/new
+├ ○ /dashboard
+├ ○ /delivery/create
+├ ○ /delivery/dashboard
+├ ○ /delivery/orders
+├ ○ /delivery/receipt
+├ ○ /delivery/tracking
+├ ○ /documents/audit
+├ ○ /documents/library
+├ ○ /documents/permissions
+├ ○ /documents/viewer
+├ ○ /expenses
+├ ○ /expenses/categories
+├ ƒ /expenses/categories/[id]
+├ ○ /expenses/categories/list
+├ ƒ /expenses/entries/[id]
+├ ○ /expenses/entries/list
+├ ○ /expenses/entries/new
+├ ○ /expenses/new
+├ ○ /hr/attendance
+├ ○ /hr/dashboard
+├ ○ /hr/employees
+├ ○ /hr/leave
+├ ○ /inventory
+├ ○ /inventory/adjustments/list
+├ ○ /inventory/adjustments/new
+├ ƒ /inventory/batches/[id]
+├ ○ /inventory/batches/list
+├ ○ /inventory/categories/list
+├ ○ /inventory/movements
+├ ƒ /inventory/products/[id]
+├ ○ /inventory/products/list
+├ ○ /inventory/products/new
+├ ○ /inventory/transfers/list
+├ ○ /inventory/transfers/new
+├ ○ /manufacturing/bom
+├ ○ /manufacturing/machines
+├ ○ /manufacturing/orders
+├ ○ /manufacturing/planning
+├ ○ /manufacturing/work-orders
+├ ○ /membership/analytics
+├ ○ /membership/billing
+├ ○ /membership/directory
+├ ○ /membership/plans
+├ ○ /membership/wallet
+├ ○ /menu
+├ ○ /payments
+├ ○ /payments/customer
+├ ○ /payments/supplier
+├ ○ /payroll/compliance
+├ ○ /payroll/dashboard
+├ ○ /payroll/payslips
+├ ○ /payroll/processing
+├ ○ /payroll/structure
+├ ○ /pos
+├ ○ /pos/cash-register
+├ ○ /pos/dashboard
+├ ○ /pos/returns
+├ ○ /pos/sale
+├ ○ /pricing
+├ ○ /procurement/dashboard
+├ ○ /procurement/grn
+├ ○ /procurement/invoices
+├ ○ /procurement/po
+├ ○ /procurement/rfq
+├ ○ /procurement/rfq/create
+├ ○ /products/price-history
+├ ƒ /projects/[id]
+├ ○ /projects/dashboard
+├ ○ /projects/gantt
+├ ○ /projects/reports
+├ ○ /projects/tasks
+├ ○ /purchases
+├ ○ /purchases/goods-received/list
+├ ○ /purchases/goods-received/new
+├ ○ /purchases/grn
+├ ○ /purchases/invoices
+├ ○ /purchases/orders
+├ ƒ /purchases/orders/[id]
+├ ○ /purchases/orders/list
+├ ○ /purchases/orders/new
+├ ƒ /purchases/suppliers/[id]
+├ ○ /purchases/suppliers/list
+├ ○ /purchases/suppliers/new
+├ ○ /sales
+├ ƒ /sales/customers/[id]
+├ ○ /sales/customers/list
+├ ○ /sales/customers/new
+├ ƒ /sales/invoices/[id]
+├ ○ /sales/invoices/list
+├ ○ /sales/list
+├ ○ /sales/new
+├ ○ /sales/pos
+├ ○ /settings
+├ ƒ /settings/branches/[id]
+├ ○ /settings/branches/list
+├ ○ /settings/branches/new
+├ ○ /settings/business-info
+├ ○ /settings/integrations
+├ ○ /settings/notifications
+├ ○ /settings/permissions/matrix
+├ ○ /settings/roles/list
+├ ○ /settings/roles/new
+├ ○ /settings/taxes
+├ ○ /settings/users/list
+├ ○ /suppliers
+├ ƒ /suppliers/[id]
+├ ○ /suppliers/dashboard
+├ ○ /suppliers/directory
+├ ○ /suppliers/evaluations
+├ ○ /suppliers/new
+├ ƒ /suppliers/profile/[id]
+├ ○ /support/analytics
+├ ○ /support/help-center
+├ ○ /support/ticket-details
+├ ○ /support/tickets
+├ ○ /warehouse
+├ ○ /warehouse/bins/list
+├ ○ /warehouse/bins/new
+├ ƒ /warehouse/locations/[id]
+├ ○ /warehouse/locations/list
+├ ○ /warehouse/locations/new
+├ ○ /warehouse/stock-movement/list
+└ ○ /warehouses
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

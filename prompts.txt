@@ -1,0 +1,687 @@
+You are the Lead UI Engineer for XHETON.
+Upgrade the system from version 0.0.013 to 0.0.014.
+Add three NEW modules with full UI, routes, components, and sidebar grouping.
+Update package.json and version.json to “0.0.014”.
+Do NOT duplicate anything built earlier.
+Everything must follow XHETON’s modern UI rules: full spacing, clean margins, perfect alignment, elegant typography, mobile-first layout, smooth animations, and correct ShadCN implementation.
+
+🔵 MODULE 1 — Notifications & Messaging Hub
+
+Centralized communication system for all notifications across XHETON.
+
+Pages / Routes
+1. /notifications — Unified Notification Center
+
+Tabs:
+
+All
+
+System
+
+Sales
+
+Inventory
+
+Deliveries
+
+Finance
+
+Workflow Automations
+
+Each notification card:
+
+Icon
+
+Title
+
+Description
+
+Timestamp
+
+Status (read/unread)
+
+“Mark as read” button
+
+Infinite scroll
+
+Filters + search
+
+Light/dark gradient support
+
+Push notifications settings quick icon
+
+2. /notifications/settings — Notification Preferences
+
+Notification types toggles
+
+Email
+
+SMS
+
+In-app
+
+Push
+
+Category-specific preferences (sales, inventory, payments, workflows, deliveries, HRM, etc.)
+
+Quiet hours UI (time range picker)
+
+“Test notification” button
+
+Save settings with toast feedback
+
+3. /messages — Internal Messaging (Slack-like UI)
+
+Left sidebar:
+
+Direct messages
+
+Departments
+
+Channels
+
+Chat window:
+
+Realtime messages
+
+File uploads
+
+Voice notes
+
+Mentions (@name)
+
+Reactions (emoji)
+
+Seen indicators
+
+Right sidebar: conversation info
+
+Dark & light chat themes
+
+🟣 MODULE 2 — Audit Trails & System Monitoring
+
+Enterprise-grade monitoring module.
+
+Pages / Routes
+1. /audit/logs — Audit Logs
+
+Table with:
+
+User
+
+Action
+
+Module
+
+Timestamp
+
+Device info
+
+IP address
+
+Filters for:
+
+User
+
+Module
+
+Date range
+
+Severity
+
+Row click → opens modal with full details
+
+Export to PDF/CSV
+
+Pagination & search
+
+2. /audit/session-monitor — Active User Sessions
+
+List of all logged-in sessions
+
+Device type
+
+Browser
+
+Login time
+
+Last activity
+
+“Force logout” button
+
+Beautiful ShadCN cards
+
+3. /audit/system-health — System Monitoring
+
+CPU usage gauge
+
+Memory usage gauge
+
+Storage usage
+
+API response times chart
+
+Error rate (per module)
+
+Logs viewer
+
+Real-time refresh toggle
+
+Light & dark gradient backgrounds
+
+🟡 MODULE 3 — Subscription & Billing Management (UGX Only)
+
+Manage XHETON plan, payment methods, invoices, usage.
+
+Pages / Routes
+1. /billing/overview — Subscription Overview
+
+Current plan
+
+Price (UGX only)
+
+Next billing date
+
+Usage limitations
+
+Metered usage cards:
+
+Users
+
+Branches
+
+Automations
+
+Storage
+
+Upgrade/downgrade buttons
+
+Payment method summary
+
+2. /billing/plans — Pricing Plans (UGX)
+
+Create pricing tiers like:
+
+Starter — UGX 120,000/month
+
+Business — UGX 350,000/month
+
+Enterprise — UGX 900,000/month
+
+Plan cards must be:
+
+Centered
+
+Fully padded
+
+Use Tailwind gradients
+
+Animated hover effects
+
+ShadCN button CTA
+
+Dark mode variants
+
+3. /billing/payment-methods
+
+Add card (UI only)
+
+Add mobile money number
+
+MTN & Airtel logos
+
+Default method selection
+
+Delete method modal
+
+4. /billing/invoices — Billing History
+
+Table:
+
+Invoice number
+
+Date
+
+Amount (UGX)
+
+Status
+
+Download
+
+Invoice viewer page
+
+Filters for date & status
+
+5. /billing/usage
+
+Metered usage charts
+
+Storage usage
+
+User count
+
+Automations usage
+
+Alerts when user approaches plan limit
+
+📌 Sidebar Groups for Prompt 14
+
+Add these 3 new groups:
+
+Communications
+
+Notification Center
+
+Notification Settings
+
+Messages
+
+Monitoring
+
+Audit Logs
+
+Session Monitor
+
+System Health
+
+Billing
+
+Subscription Overview
+
+Plans (UGX)
+
+Payment Methods
+
+Invoices
+
+Usage
+
+✔ All must be collapsed by default
+✔ Only one expands at a time
+✔ Animated transitions
+
+📌 Version Update
+
+Update both files:
+
+version.json
+{
+  "version": "0.0.014"
+}
+
+package.json
+{
+  "version": "0.0.014"
+}
+You are the Senior Frontend Engineer for XHETON.
+Upgrade the system UI from version 0.0.014 to 0.0.015.
+Add three NEW modules with full UI, routes, components, and sidebar grouping.
+Update package.json and version.json to “0.0.015”.
+Do NOT duplicate anything built before.
+Follow XHETON’s modern UI rules: centered content, proper padding, spacing, ShadCN components, Tailwind gradients, Framer Motion animations, mobile-first, light/dark mode support.
+All financial values must use UGX.
+
+🟦 MODULE 1 — Forecasting & Demand Planning
+Pages / Routes
+1. /forecast/dashboard
+
+Sales trends (UGX)
+
+Inventory demand forecast
+
+Charts for product categories
+
+Compare past periods
+
+KPIs overview
+
+Smooth animations with Framer Motion
+
+2. /forecast/product-demand
+
+Table of products
+
+Forecasted demand in UGX
+
+Stock recommendations
+
+Graph + table combined
+
+Filters: category, warehouse, date range
+
+3. /forecast/alerts
+
+Low stock forecast alerts
+
+Over-demand warnings
+
+Automatic email notifications (dummy UI)
+
+Priority levels
+
+4. /forecast/settings
+
+Forecasting method selection: moving average, linear regression
+
+Date ranges
+
+Enable/disable auto-forecast
+
+Light/dark mode gradient styling
+
+🟩 MODULE 2 — E-Commerce & Online Sales Integration
+Pages / Routes
+1. /ecommerce/channels
+
+Connect online sales channels: Shopify, WooCommerce, Jumia, Kilimall
+
+Add/edit/remove channels
+
+API keys section
+
+Status badge for connection
+
+2. /ecommerce/products
+
+Sync products with channels
+
+Product availability status
+
+Price in UGX
+
+Bulk import/export
+
+Category mapping
+
+3. /ecommerce/orders
+
+Sync orders from channels
+
+View order details, customer info, payment status (UGX)
+
+Mark shipped, canceled, returned
+
+Table with search, filter, and pagination
+
+4. /ecommerce/logs
+
+Integration activity logs
+
+Success/fail badges
+
+Last sync timestamp
+
+View error messages in modal
+
+🟥 MODULE 3 — Employee Recruitment & Onboarding
+Pages / Routes
+1. /hr/recruitment/jobs
+
+List open job positions
+
+Add new jobs
+
+Status: open/closed
+
+Department assignment
+
+Job description editor
+
+2. /hr/recruitment/applicants
+
+List applicants
+
+Status: applied, shortlisted, interviewed, offered, rejected
+
+Filter by job, date, status
+
+CV preview modal
+
+Notes panel for interviews
+
+3. /hr/recruitment/interviews
+
+Schedule interviews
+
+Assign panel
+
+Candidate availability
+
+Interview feedback form
+
+4. /hr/onboarding
+
+Assign onboarding tasks
+
+Employee welcome info
+
+Equipment allocation UI
+
+Progress tracker (percentage completed)
+
+Light/dark mode gradients and modern spacing
+
+🎯 Sidebar Groups for Prompt 15
+Forecasting
+
+Dashboard
+
+Product Demand
+
+Alerts
+
+Settings
+
+E-Commerce
+
+Channels
+
+Products
+
+Orders
+
+Logs
+
+Recruitment
+
+Job Positions
+
+Applicants
+
+Interviews
+
+Onboarding
+
+✔ All groups collapsed by default
+✔ Accordion behavior (one open at a time)
+✔ Lucide icons for all new groups
+✔ Smooth animation transitions
+✔ Mobile sidebar compatible
+
+🎯 Version Update
+
+Update both files:
+
+version.json
+{
+  "version": "0.0.015"
+}
+
+package.json
+{
+  "version": "0.0.015"
+}
+You are the Lead Frontend Engineer for XHETON.
+Upgrade the system UI from version 0.0.015 to 0.0.016.
+Add three NEW modules with full UI, routes, components, and sidebar grouping.
+Update package.json and version.json to “0.0.016”.
+Do NOT duplicate anything built before.
+Follow XHETON’s modern UI rules: centered content, proper padding, spacing, ShadCN components, Tailwind gradients, Framer Motion animations, mobile-first, light/dark mode support.
+All financial values must use UGX.
+
+🟦 MODULE 1 — Vendor Performance & Ratings
+Pages / Routes
+1. /vendors/performance
+
+Table of all vendors
+
+KPIs: on-time delivery %, quality rating, total orders, total value (UGX)
+
+Filters: date range, category, rating
+
+Sortable columns
+
+Click row → vendor detail modal
+
+2. /vendors/ratings
+
+Star rating system per vendor
+
+Feedback from internal departments
+
+Average score charts
+
+Highlight top-performing vendors
+
+Light/dark mode gradient support
+
+3. /vendors/reports
+
+Performance trend charts
+
+Export to PDF/CSV
+
+Drill down by department, product category, location
+
+Animated charts with Recharts
+
+🟩 MODULE 2 — Event & Campaign Management
+Pages / Routes
+1. /campaigns/dashboard
+
+List all active, upcoming, past campaigns
+
+KPIs: revenue impact (UGX), participation, engagement
+
+Filter by type: marketing, training, sales promotion
+
+2. /campaigns/create
+
+Form to create campaigns
+
+Title, description, type, target audience
+
+Start & end dates
+
+Budget in UGX
+
+Assign responsible departments
+
+3. /campaigns/calendar
+
+FullCalendar integration
+
+Color-coded events by type
+
+Drag & drop rescheduling
+
+Click event → details modal
+
+4. /campaigns/analytics
+
+Charts & KPIs for campaign effectiveness
+
+Revenue in UGX, conversion rate, engagement metrics
+
+Export options
+
+🟥 MODULE 3 — Compliance & Regulatory Tracking
+Pages / Routes
+1. /compliance/dashboard
+
+List all compliance requirements
+
+Status: Pending, Completed, Overdue
+
+Category: Tax, Licenses, Safety, Industry Regulations
+
+Light/dark mode gradients
+
+Search & filters
+
+2. /compliance/documents
+
+Upload regulatory documents
+
+Document type, expiry date, responsible person
+
+Version history
+
+Tags & categories
+
+3. /compliance/alerts
+
+Alerts for approaching deadlines
+
+Overdue items highlighted
+
+Push notifications for critical alerts
+
+Action buttons: mark as completed, assign
+
+4. /compliance/reports
+
+Compliance summary charts
+
+Department-wise compliance score
+
+Export PDF/CSV
+
+🎯 Sidebar Groups for Prompt 16
+Vendors
+
+Performance
+
+Ratings
+
+Reports
+
+Campaigns
+
+Dashboard
+
+Create
+
+Calendar
+
+Analytics
+
+Compliance
+
+Dashboard
+
+Documents
+
+Alerts
+
+Reports
+
+✔ All groups collapsed by default
+✔ Only one expands at a time
+✔ Lucide icons for all new groups
+✔ Smooth animation transitions
+✔ Mobile sidebar compatible
+
+🎯 Version Update
+
+Update both files:
+
+version.json
+{
+  "version": "0.0.016"
+}
+
+package.json
+{
+  "version": "0.0.016"
+}
