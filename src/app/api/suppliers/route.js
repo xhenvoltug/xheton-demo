@@ -4,12 +4,35 @@ import { query } from '@/lib/db';
 /**
  * GET /api/suppliers - Get all suppliers for dropdowns
  * Returns array of suppliers with id, supplier_name, etc.
+ * Auto-creates Opening Stock supplier if it doesn't exist
  */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit')) || 100;
     const offset = parseInt(searchParams.get('offset')) || 0;
+
+    // Ensure Opening Stock supplier exists
+    const openingStockCheck = await query(
+      `SELECT id FROM suppliers WHERE supplier_code = 'OPENING_STOCK' AND deleted_at IS NULL LIMIT 1`
+    );
+
+    console.log('Opening Stock check result:', openingStockCheck.rowCount);
+
+    if (openingStockCheck.rowCount === 0) {
+      try {
+        // Create Opening Stock supplier if it doesn't exist
+        const createResult = await query(
+          `INSERT INTO suppliers (supplier_name, supplier_code, email, country, is_active, payment_terms, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+           RETURNING id, supplier_name`,
+          ['Opening Stock', 'OPENING_STOCK', 'system@xheton.local', 'Internal', true, 0]
+        );
+        console.log('Opening Stock supplier created:', createResult.rows[0]);
+      } catch (createErr) {
+        console.warn('Could not create Opening Stock supplier:', createErr.message);
+      }
+    }
 
     const rows = await query(
       `SELECT id, supplier_name, supplier_code, email, phone, address, city, country, 
@@ -21,6 +44,7 @@ export async function GET(request) {
       [limit, offset]
     );
 
+    console.log('Total suppliers returned:', rows.rowCount);
     // Return as array directly for compatibility with dropdown forms
     return NextResponse.json(rows.rows);
   } catch (err) {

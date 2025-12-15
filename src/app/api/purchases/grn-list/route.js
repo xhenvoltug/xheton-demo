@@ -98,10 +98,46 @@ export async function POST(request) {
       items = [] // Array of {product_id, quantity, batch_number, unit_cost}
     } = body;
 
-    if (!supplier_id || !warehouse_id || items.length === 0) {
+    if (!warehouse_id || items.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields: supplier_id, warehouse_id, items'
+        error: 'Missing required fields: warehouse_id, items'
+      }, { status: 400 });
+    }
+
+    // If no supplier provided, use Opening Stock supplier
+    let finalSupplierId = supplier_id;
+    
+    if (!finalSupplierId) {
+      // Ensure Opening Stock supplier exists
+      const openingStockCheck = await query(
+        `SELECT id FROM suppliers WHERE supplier_code = 'OPENING_STOCK' AND deleted_at IS NULL LIMIT 1`
+      );
+
+      if (openingStockCheck.rowCount === 0) {
+        // Create Opening Stock supplier if it doesn't exist
+        try {
+          const createSupplier = await query(
+            `INSERT INTO suppliers (supplier_name, supplier_code, email, country, is_active, payment_terms, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, NOW())
+             RETURNING id`,
+            ['Opening Stock', 'OPENING_STOCK', 'system@xheton.local', 'Internal', true, 0]
+          );
+          finalSupplierId = createSupplier.rows[0].id;
+        } catch (e) {
+          console.warn('Could not create Opening Stock supplier:', e.message);
+        }
+      }
+
+      if (!finalSupplierId) {
+        finalSupplierId = openingStockCheck.rows[0]?.id;
+      }
+    }
+
+    if (!finalSupplierId) {
+      return NextResponse.json({
+        success: false,
+        error: 'No supplier provided and Opening Stock supplier not found'
       }, { status: 400 });
     }
 
@@ -117,7 +153,7 @@ export async function POST(request) {
         grn_number, supplier_id, warehouse_id, po_reference, grn_date, notes, status, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, 'draft', NOW())
       RETURNING *`,
-      [grnNumber, supplier_id, warehouse_id, po_reference || null, grn_date, notes || null]
+      [grnNumber, finalSupplierId, warehouse_id, po_reference || null, grn_date, notes || null]
     );
 
     const grnId = createRes.rows[0].id;
@@ -148,6 +184,6 @@ export async function POST(request) {
     }, { status: 201 });
   } catch (err) {
     console.error('POST GRN error:', err.message);
-    return NextResponse.json({ success: false, error: 'Failed to create GRN' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to create GRN', details: err.message }, { status: 500 });
   }
 }

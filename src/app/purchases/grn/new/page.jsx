@@ -47,32 +47,23 @@ export default function NewGRNPage() {
 
         if (suppRes.ok) {
           const suppData = await suppRes.json();
-          console.log('Suppliers response:', suppData);
           const suppliersList = Array.isArray(suppData) ? suppData : suppData.data || [];
-          console.log('Suppliers set to:', suppliersList);
-          console.log('Opening Stock supplier found:', suppliersList.find(s => s.supplier_name?.toLowerCase() === 'opening stock'));
           setSuppliers(suppliersList);
         } else {
-          console.error('Suppliers API error:', suppRes.status, suppRes.statusText);
-          const errorData = await suppRes.json();
-          console.error('Suppliers error details:', errorData);
+          console.error('Suppliers API error:', suppRes.status);
         }
         if (whRes.ok) {
           const whData = await whRes.json();
-          console.log('Warehouses API response:', whData);
           const warehousesList = whData.warehouses || whData.data || [];
-          console.log('Warehouses set to:', warehousesList);
           setWarehouses(warehousesList);
         }
         if (prodRes.ok) {
           const prodData = await prodRes.json();
-          console.log('Products response:', prodData);
           const productsList = prodData.data || [];
-          console.log('Products set to:', productsList);
           setProducts(productsList);
         } else {
-          console.error('Products API error:', prodRes.status, prodRes.statusText);
-          const errorData = await prodRes.json();
+          console.error('Products API error:', prodRes.status);
+        }
           console.error('Products error details:', errorData);
         }
       } catch (err) {
@@ -108,34 +99,13 @@ export default function NewGRNPage() {
 
     setSubmitting(true);
     try {
-      // If no supplier selected, use Opening Stock
-      let supplier_id = grnData.supplier_id;
-      
-      console.log('GRN Submit - Current supplier_id:', supplier_id);
-      console.log('GRN Submit - Available suppliers:', suppliers);
-      
-      if (!supplier_id) {
-        // Find or create Opening Stock supplier
-        const openingStockSupplier = suppliers.find(s => 
-          s.supplier_name?.toLowerCase() === 'opening stock'
-        );
-        console.log('Opening Stock supplier found:', openingStockSupplier);
-        supplier_id = openingStockSupplier?.id;
-
-        if (!supplier_id) {
-          console.error('Opening Stock supplier not found in list:', suppliers);
-          toast.error('Opening Stock supplier not found. Please create it or select a supplier.');
-          setSubmitting(false);
-          return;
-        }
-      }
-
+      // Send GRN data - API will auto-create Opening Stock supplier if needed
       const res = await fetch('/api/purchases/grn-list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...grnData,
-          supplier_id,
+          // Note: supplier_id can be undefined for Opening Stock
           items: items.map(({ id, ...item }) => item)
         })
       });
@@ -147,6 +117,7 @@ export default function NewGRNPage() {
         setTimeout(() => router.push('/purchases/grn'), 1500);
       } else {
         toast.error(data.error || 'Failed to create GRN');
+        console.error('GRN creation error:', data);
       }
     } catch (err) {
       toast.error(err.message);
