@@ -139,8 +139,8 @@ export default function NewPurchaseOrderPage() {
                           className="w-full rounded-2xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select supplier</option>
-                          {mockSuppliers.map((supplier) => (
-                            <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                          {suppliers.map((supplier) => (
+                            <option key={supplier.id} value={supplier.id}>{supplier.supplier_name || supplier.name}</option>
                           ))}
                         </select>
                         {errors.supplier && <p className="text-red-600 text-sm mt-1">{errors.supplier.message}</p>}
@@ -192,14 +192,14 @@ export default function NewPurchaseOrderPage() {
                               value={item.product}
                               onChange={(e) => {
                                 updateItem(index, 'product', e.target.value);
-                                const product = mockProducts.find(p => p.id === e.target.value);
-                                if (product) updateItem(index, 'unitCost', product.lastCost);
+                                const product = products.find(p => p.id === e.target.value);
+                                if (product) updateItem(index, 'unitCost', product.cost_price || 0);
                               }}
                               className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
                             >
                               <option value="">Select product</option>
-                              {mockProducts.map((product) => (
-                                <option key={product.id} value={product.id}>{product.name}</option>
+                              {products.map((product) => (
+                                <option key={product.id} value={product.id}>{product.product_name || product.name}</option>
                               ))}
                             </select>
                           </div>

@@ -10,8 +10,6 @@ import MobileCard from '@/components/shared/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Eye, Download, Loader2, Package } from 'lucide-react';
-  },
-];
 
 const statusColors = {
   completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
