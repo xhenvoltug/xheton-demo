@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
 import DataTable from '@/components/shared/DataTable';
@@ -8,49 +8,82 @@ import FilterBar from '@/components/shared/FilterBar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import StatusBadge from '@/components/core/StatusBadge';
-import { Plus, Download, Eye, AlertCircle } from 'lucide-react';
+import { Plus, Download, Eye, AlertCircle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
-const mockInvoices = [
-  { id: 'INV-S001', supplier: 'ABC Suppliers Ltd', relatedPO: 'PO-001', total: 250000, amountPaid: 0, balance: 250000, dueDate: '2025-12-20', status: 'Unpaid' },
-  { id: 'INV-S002', supplier: 'Tech Distributors', relatedPO: 'PO-002', total: 185000, amountPaid: 92500, balance: 92500, dueDate: '2025-12-15', status: 'Partially Paid' },
-  { id: 'INV-S003', supplier: 'Global Imports', relatedPO: 'PO-003', total: 145000, amountPaid: 145000, balance: 0, dueDate: '2025-12-10', status: 'Paid' },
-  { id: 'INV-S004', supplier: 'Office Supplies Co', relatedPO: null, total: 85000, amountPaid: 0, balance: 85000, dueDate: '2025-11-30', status: 'Overdue' },
-  { id: 'INV-S005', supplier: 'Kenya Hardware Ltd', relatedPO: 'PO-005', total: 120000, amountPaid: 60000, balance: 60000, dueDate: '2025-12-25', status: 'Partially Paid' }
-];
-
 export default function SupplierInvoicesPage() {
   const router = useRouter();
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const suppliers = ['all', ...new Set(mockInvoices.map(inv => inv.supplier))];
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/purchases/invoices/list');
+        if (!res.ok) throw new Error('Failed to load invoices');
+        const json = await res.json();
+        setInvoices(json.data || json || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvoices();
+  }, []);
 
-  const filteredInvoices = mockInvoices.filter(inv => {
-    const matchesSearch = inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inv.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSupplier = supplierFilter === 'all' || inv.supplier === supplierFilter;
-    const matchesStatus = statusFilter === 'all' || inv.status.toLowerCase().replace(' ', '') === statusFilter;
+  const suppliers = ['all', ...new Set(invoices.map(inv => inv.supplier_name || inv.supplier || ''))];
+
+  const filteredInvoices = invoices.filter(inv => {
+    const matchesSearch = (inv.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (inv.supplier_name || inv.supplier || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSupplier = supplierFilter === 'all' || (inv.supplier_name || inv.supplier) === supplierFilter;
+    const matchesStatus = statusFilter === 'all' || (inv.status || '').toLowerCase().replace(' ', '') === statusFilter;
     return matchesSearch && matchesSupplier && matchesStatus;
   });
 
-  const totalInvoices = mockInvoices.length;
-  const totalAmount = mockInvoices.reduce((sum, inv) => sum + inv.total, 0);
-  const totalPaid = mockInvoices.reduce((sum, inv) => sum + inv.amountPaid, 0);
-  const totalBalance = mockInvoices.reduce((sum, inv) => sum + inv.balance, 0);
-  const overdueCount = mockInvoices.filter(inv => inv.status === 'Overdue').length;
+  const totalInvoices = invoices.length;
+  const totalAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.total || 0)), 0);
+  const totalPaid = invoices.reduce((sum, inv) => sum + (parseFloat(inv.amount_paid || 0)), 0);
+  const totalBalance = invoices.reduce((sum, inv) => sum + (parseFloat(inv.balance || 0)), 0);
+  const overdueCount = invoices.filter(inv => (inv.status || '').toLowerCase() === 'overdue').length;
 
   const getStatusVariant = (status) => {
     const map = {
-      'Unpaid': 'pending',
-      'Partially Paid': 'info',
-      'Paid': 'success',
-      'Overdue': 'error'
+      'unpaid': 'pending',
+      'partially paid': 'info',
+      'paid': 'success',
+      'overdue': 'error'
     };
-    return map[status] || 'default';
+    return map[(status || '').toLowerCase()] || 'default';
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading invoices...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900/30 dark:bg-red-900/10">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const columns = [
     { 
@@ -67,29 +100,20 @@ export default function SupplierInvoicesPage() {
     },
     { 
       header: 'Supplier', 
-      accessor: 'supplier',
-      render: (row) => <span className="font-semibold text-gray-900 dark:text-white">{row.supplier}</span>
-    },
-    { 
-      header: 'Related PO', 
-      accessor: 'relatedPO',
-      render: (row) => row.relatedPO ? (
-        <span className="font-mono text-sm text-gray-600 dark:text-gray-400">{row.relatedPO}</span>
-      ) : (
-        <span className="text-gray-400">-</span>
-      )
+      accessor: 'supplier_name',
+      render: (row) => <span className="font-semibold text-gray-900 dark:text-white">{row.supplier_name || row.supplier}</span>
     },
     { 
       header: 'Total', 
       accessor: 'total',
-      render: (row) => <span className="font-bold">UGX {row.total.toLocaleString()}</span>
+      render: (row) => <span className="font-bold">UGX {(parseFloat(row.total) || 0).toLocaleString()}</span>
     },
     { 
       header: 'Amount Paid', 
-      accessor: 'amountPaid',
+      accessor: 'amount_paid',
       render: (row) => (
-        <span className={row.amountPaid > 0 ? 'font-semibold text-emerald-600' : 'text-gray-500'}>
-          UGX {row.amountPaid.toLocaleString()}
+        <span className={(parseFloat(row.amount_paid) || 0) > 0 ? 'font-semibold text-emerald-600' : 'text-gray-500'}>
+          UGX {(parseFloat(row.amount_paid) || 0).toLocaleString()}
         </span>
       )
     },

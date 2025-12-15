@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import {
@@ -24,16 +24,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import DashboardLayout from '@/components/DashboardLayout'
 
-const mockProducts = [
-  { id: 'PROD-001', name: 'Laptop Computer X1', price: 850, barcode: '1234567890', sku: 'LAP-X1' },
-  { id: 'PROD-002', name: 'Wireless Mouse', price: 45, barcode: '1234567891', sku: 'MOU-WL' },
-  { id: 'PROD-003', name: 'USB-C Hub', price: 32, barcode: '1234567892', sku: 'HUB-C' },
-  { id: 'PROD-004', name: 'Mechanical Keyboard', price: 120, barcode: '1234567893', sku: 'KEY-MEC' },
-  { id: 'PROD-005', name: 'Monitor 27"', price: 450, barcode: '1234567894', sku: 'MON-27' }
-]
-
 export default function POSSale() {
   const router = useRouter()
+  const [products, setProducts] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [loadingProducts, setLoadingProducts] = useState(true)
   const [cartItems, setCartItems] = useState([])
   const [barcodeInput, setBarcodeInput] = useState('')
   const [discountType, setDiscountType] = useState('none')
@@ -41,19 +36,63 @@ export default function POSSale() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [amountTendered, setAmountTendered] = useState('')
+  const [selectedCustomer, setSelectedCustomer] = useState('')
+  const [processingPayment, setProcessingPayment] = useState(false)
+  const [paymentError, setPaymentError] = useState(null)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
+
+  // Fetch products and customers on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [prodRes, custRes] = await Promise.all([
+          fetch('/api/inventory/products/list'),
+          fetch('/api/sales/customers')
+        ]);
+        
+        const prodData = await prodRes.json();
+        const custData = await custRes.json();
+        
+        if (prodData.success) setProducts(prodData.products || []);
+        if (custData.success) setCustomers(custData.customers || []);
+      } catch (err) {
+        console.error('Failed to load data:', err);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const addToCart = (product) => {
+    // Validate stock before adding to cart
+    if (product.current_stock <= 0) {
+      alert(`⚠️ "${product.product_name}" is out of stock!`);
+      return;
+    }
+
     const existing = cartItems.find(item => item.id === product.id)
     if (existing) {
+      const newQty = existing.quantity + 1;
+      if (newQty > product.current_stock) {
+        alert(`⚠️ Only ${product.current_stock} units available for "${product.product_name}"`);
+        return;
+      }
       setCartItems(cartItems.map(item =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        item.id === product.id ? { ...item, quantity: newQty } : item
       ))
     } else {
-      setCartItems([...cartItems, { ...product, quantity: 1 }])
+      setCartItems([...cartItems, { ...product, quantity: 1, product_id: product.id }])
     }
   }
 
   const updateQuantity = (id, newQty) => {
+    const product = products.find(p => p.id === id);
+    if (newQty > 0 && newQty > (product?.current_stock || 0)) {
+      alert(`⚠️ Only ${product?.current_stock || 0} units available`);
+      return;
+    }
     if (newQty === 0) {
       setCartItems(cartItems.filter(item => item.id !== id))
     } else {
@@ -67,23 +106,86 @@ export default function POSSale() {
     setCartItems(cartItems.filter(item => item.id !== id))
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + ((item.selling_price || item.price || 0) * item.quantity), 0)
   const discountAmount = discountType === 'percentage'
     ? (subtotal * discountValue / 100)
     : discountType === 'fixed'
     ? discountValue
     : 0
-  const taxRate = 0.16 // 16% VAT
+  const taxRate = 0.18 // 18% VAT (Uganda standard)
   const taxAmount = (subtotal - discountAmount) * taxRate
   const grandTotal = subtotal - discountAmount + taxAmount
   const changeAmount = amountTendered ? parseFloat(amountTendered) - grandTotal : 0
 
   const handleBarcodeSubmit = (e) => {
     e.preventDefault()
-    const product = mockProducts.find(p => p.barcode === barcodeInput || p.sku === barcodeInput)
+    if (!barcodeInput) return;
+    
+    const product = products.find(p => 
+      p.barcode === barcodeInput || 
+      p.product_code === barcodeInput || 
+      (p.id === barcodeInput)
+    )
     if (product) {
       addToCart(product)
       setBarcodeInput('')
+    } else {
+      alert('Product not found');
+      setBarcodeInput('');
+    }
+  }
+
+  // Process checkout - CRITICAL: calls API with stock validation
+  const handleCheckout = async () => {
+    if (cartItems.length === 0) {
+      alert('Cart is empty!');
+      return;
+    }
+
+    if (!selectedCustomer) {
+      alert('Please select a customer');
+      return;
+    }
+
+    setProcessingPayment(true);
+    setPaymentError(null);
+
+    try {
+      const response = await fetch('/api/sales/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: selectedCustomer,
+          warehouse_id: 'default-warehouse', // You may need to set this dynamically
+          items: cartItems.map(item => ({
+            product_id: item.id || item.product_id,
+            quantity: item.quantity
+          }))
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.status === 409) {
+        // Stock validation error
+        setPaymentError(data.error || 'Insufficient stock for some items');
+        setProcessingPayment(false);
+        return;
+      }
+
+      if (response.ok && data.success) {
+        setPaymentSuccess(true);
+        setCartItems([]);
+        setTimeout(() => {
+          router.push(`/pos/receipt?invoice_id=${data.invoice?.id}`);
+        }, 2000);
+      } else {
+        setPaymentError(data.error || 'Payment processing failed');
+        setProcessingPayment(false);
+      }
+    } catch (err) {
+      setPaymentError(err.message);
+      setProcessingPayment(false);
     }
   }
 
@@ -128,25 +230,31 @@ export default function POSSale() {
 
             {/* Quick Product Buttons */}
             <Card className="p-6 rounded-3xl">
-              <h3 className="font-semibold mb-4">Quick Add Products</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {mockProducts.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => addToCart(product)}
-                    className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-blue-50 hover:to-cyan-50 rounded-2xl text-left transition-all border-2 border-transparent hover:border-blue-300"
-                  >
-                    <p className="font-semibold text-sm">{product.name}</p>
-                    <p className="text-lg font-bold text-blue-600 mt-1">${product.price}</p>
-                    <p className="text-xs text-gray-500">{product.sku}</p>
-                  </button>
-                ))}
-              </div>
+              <h3 className="font-semibold mb-4">Quick Add Products (Stock Available)</h3>
+              {loadingProducts ? (
+                <div className="text-center py-6 text-gray-500">Loading products...</div>
+              ) : products.filter(p => p.current_stock > 0).length === 0 ? (
+                <div className="text-center py-6 text-gray-500">No products in stock</div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {products.filter(p => p.current_stock > 0).slice(0, 6).map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-blue-50 hover:to-cyan-50 rounded-2xl text-left transition-all border-2 border-transparent hover:border-blue-300"
+                    >
+                      <p className="font-semibold text-sm line-clamp-2">{product.product_name}</p>
+                      <p className="text-lg font-bold text-blue-600 mt-1">UGX {(product.selling_price || 0).toLocaleString()}</p>
+                      <p className="text-xs text-gray-500 mt-1">Stock: {product.current_stock}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </Card>
 
             {/* Cart Items */}
             <Card className="p-6 rounded-3xl">
-              <h3 className="font-semibold mb-4">Cart Items</h3>
+              <h3 className="font-semibold mb-4">Cart Items ({cartItems.length})</h3>
               {cartItems.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
                   <Tag className="w-16 h-16 mx-auto mb-3 opacity-50" />
@@ -163,8 +271,8 @@ export default function POSSale() {
                       className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl"
                     >
                       <div className="flex-1">
-                        <p className="font-semibold">{item.name}</p>
-                        <p className="text-sm text-gray-600">UGX {item.price.toLocaleString()} each</p>
+                        <p className="font-semibold">{item.product_name}</p>
+                        <p className="text-sm text-gray-600">UGX {(item.selling_price || item.price || 0).toLocaleString()} each</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2 bg-white rounded-xl p-1">

@@ -65,7 +65,7 @@ export function DataTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          <motion.tr
+          <motion.div
             variants={container}
             initial="hidden"
             animate="show"
@@ -82,32 +82,35 @@ export function DataTable({
               </TableRow>
             ) : (
               safeData.map((row, rowIdx) => (
-                <motion.tr
+                <motion.div
                   key={rowIdx}
                   variants={item}
                   className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
-                  style={{ display: 'table-row' }}
+                  style={{ display: 'contents' }}
+                  asChild
                 >
-                  {selectable && (
-                    <TableCell className={getCellPadding()}>
-                      <Checkbox 
-                        checked={selectedRows.includes(row.id || rowIdx)}
-                        onCheckedChange={() => onSelectRow(row.id || rowIdx)}
-                      />
-                    </TableCell>
-                  )}
-                  {safeColumns.map((column, colIdx) => (
-                    <TableCell 
-                      key={colIdx} 
-                      className={`${getCellPadding()} ${column.cellClassName || ''}`}
-                    >
-                      {column.render ? column.render(row) : row[column.accessor]}
-                    </TableCell>
-                  ))}
-                </motion.tr>
+                  <TableRow>
+                    {selectable && (
+                      <TableCell className={getCellPadding()}>
+                        <Checkbox 
+                          checked={selectedRows.includes(row.id || rowIdx)}
+                          onCheckedChange={() => onSelectRow(row.id || rowIdx)}
+                        />
+                      </TableCell>
+                    )}
+                    {safeColumns.map((column, colIdx) => (
+                      <TableCell 
+                        key={colIdx} 
+                        className={`${getCellPadding()} ${column.cellClassName || ''}`}
+                      >
+                        {column.render ? column.render(row) : row[column.accessor]}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </motion.div>
               ))
             )}
-          </motion.tr>
+          </motion.div>
         </TableBody>
       </Table>
     </div>

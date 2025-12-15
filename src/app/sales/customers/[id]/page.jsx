@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -10,36 +10,57 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, Phone, MapPin, Edit, Download, DollarSign, ShoppingCart, CreditCard, TrendingUp } from 'lucide-react';
-
-// Mock customer data
-const mockCustomer = {
-  id: 'C001',
-  name: 'Acme Corporation',
-  email: 'contact@acme.com',
-  phone: '+1 (555) 123-4567',
-  address: '123 Business Ave, Suite 500',
-  city: 'New York',
-  state: 'NY',
-  zipCode: '10001',
-  country: 'USA',
-  totalPurchases: 124500.00,
-  outstandingBalance: 0,
-  creditLimit: 50000,
-  status: 'active',
-  joinedDate: '2024-01-15',
-};
-
-const mockPurchaseHistory = [
-  { id: 'INV-001', date: '2025-12-06', items: 5, total: 12450.00, status: 'paid' },
-  { id: 'INV-015', date: '2025-11-22', items: 8, total: 24500.00, status: 'paid' },
-  { id: 'INV-032', date: '2025-10-18', items: 12, total: 45600.00, status: 'paid' },
-  { id: 'INV-047', date: '2025-09-05', items: 7, total: 18950.00, status: 'paid' },
-];
+import { Mail, Phone, MapPin, Edit, Download, DollarSign, ShoppingCart, CreditCard, TrendingUp, Loader2 } from 'lucide-react';
 
 export default function CustomerProfilePage({ params }) {
   const { id } = use(params);
   const router = useRouter();
+  const [customer, setCustomer] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/sales/customers/${id}`);
+        if (!response.ok) throw new Error('Failed to load customer');
+        const data = await response.json();
+        setCustomer(data.data || data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchCustomer();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+          <p className="text-gray-600 dark:text-gray-400">Loading customer details...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !customer) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20 text-red-600">
+          <p className="font-semibold mb-2">Error loading customer</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{error || 'Customer not found'}</p>
+          <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const purchaseColumns = [
     {

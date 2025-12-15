@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -13,7 +13,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, FileText } from 'lucide-react';
+import { Plus, Trash2, FileText, Loader2 } from 'lucide-react';
 
 const poSchema = z.object({
   supplier: z.string().min(1, 'Supplier is required'),
@@ -23,23 +23,41 @@ const poSchema = z.object({
   notes: z.string().optional()
 });
 
-const mockSuppliers = [
-  { id: 'S001', name: 'ABC Suppliers Ltd' },
-  { id: 'S002', name: 'Tech Distributors' },
-  { id: 'S003', name: 'Global Imports' }
-];
-
-const mockProducts = [
-  { id: 'P001', name: 'Product A', lastCost: 1500 },
-  { id: 'P002', name: 'Product B', lastCost: 2500 },
-  { id: 'P003', name: 'Product C', lastCost: 800 }
-];
-
 export default function NewPurchaseOrderPage() {
   const router = useRouter();
+  const [suppliers, setSuppliers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(poSchema)
   });
+
+  // Fetch suppliers and products for dropdowns
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [suppliersRes, productsRes] = await Promise.all([
+          fetch('/api/purchases/suppliers/list'),
+          fetch('/api/inventory/products/list')
+        ]);
+        
+        if (suppliersRes.ok) {
+          const suppData = await suppliersRes.json();
+          setSuppliers(suppData.data || []);
+        }
+        if (productsRes.ok) {
+          const prodData = await productsRes.json();
+          setProducts(prodData.data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load dropdown data:', err);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const [items, setItems] = useState([
     { product: '', quantity: '', unitCost: '', total: 0 }

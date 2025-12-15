@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -10,54 +10,66 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Package, DollarSign, TrendingUp, Warehouse } from 'lucide-react';
-
-const mockProduct = {
-  id: 'P001',
-  image: '💻',
-  sku: 'LP-PRO-15',
-  name: 'Laptop Pro 15"',
-  category: 'Electronics',
-  description: 'High-performance laptop with 15-inch display, perfect for professionals.',
-  cost: 899.99,
-  price: 1299.99,
-  stock: 45,
-  minStock: 10,
-  unit: 'piece',
-  barcode: '1234567890123',
-  weight: 2.5,
-  dimensions: '35 × 24 × 2 cm',
-};
-
-const stockByWarehouse = [
-  { warehouse: 'Main Warehouse', location: 'A-12-05', quantity: 30 },
-  { warehouse: 'North Branch', location: 'B-08-12', quantity: 10 },
-  { warehouse: 'South Branch', location: 'C-15-03', quantity: 5 },
-];
-
-const salesHistory = [
-  { id: 'INV-001', date: '2025-12-06', customer: 'Acme Corp', quantity: 3, total: 3899.97 },
-  { id: 'INV-015', date: '2025-11-22', customer: 'TechStart Inc', quantity: 2, total: 2599.98 },
-  { id: 'INV-032', date: '2025-10-18', customer: 'Global Traders', quantity: 5, total: 6499.95 },
-];
-
-const purchaseHistory = [
-  { id: 'PO-045', date: '2025-11-30', supplier: 'Tech Supplies Co', quantity: 20, cost: 17999.80 },
-  { id: 'PO-032', date: '2025-10-15', supplier: 'Global Electronics', quantity: 30, cost: 26999.70 },
-];
+import { Edit, Package, DollarSign, TrendingUp, Warehouse, Loader2 } from 'lucide-react';
 
 export default function ProductDetailPage({ params }) {
   const { id } = use(params);
   const router = useRouter();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const profitMargin = ((mockProduct.price - mockProduct.cost) / mockProduct.price * 100).toFixed(1);
-  const totalValue = mockProduct.stock * mockProduct.cost;
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/inventory/products/${id}`);
+        if (!response.ok) throw new Error('Failed to load product');
+        const data = await response.json();
+        setProduct(data.data || data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchProduct();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+          <p className="text-gray-600 dark:text-gray-400">Loading product details...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20 text-red-600">
+          <p className="font-semibold mb-2">Error loading product</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{error || 'Product not found'}</p>
+          <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const profitMargin = ((product.selling_price - product.cost_price) / product.selling_price * 100).toFixed(1);
+  const totalValue = product.quantity * product.cost_price;
 
   return (
     <DashboardLayout>
       <div className="xheton-page">
         <PageHeader
-          title={mockProduct.name}
+          title={product.product_name}
           subtitle={`SKU: ${mockProduct.sku} • Category: ${mockProduct.category}`}
           actions={[
             <Button

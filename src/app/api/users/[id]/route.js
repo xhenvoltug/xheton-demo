@@ -64,23 +64,23 @@ export async function PUT(request, { params }) {
     let paramCount = 1;
     
     if (first_name !== undefined) {
-      updates.push(`first_name = $${paramCount++}`);
+      updates.push('first_name = $' + paramCount++);
       values.push(first_name);
     }
     if (last_name !== undefined) {
-      updates.push(`last_name = $${paramCount++}`);
+      updates.push('last_name = $' + paramCount++);
       values.push(last_name);
     }
     if (email !== undefined) {
-      updates.push(`email = $${paramCount++}`);
+      updates.push('email = $' + paramCount++);
       values.push(email);
     }
     if (role !== undefined) {
-      updates.push(`role = $${paramCount++}`);
+      updates.push('role = $' + paramCount++);
       values.push(role);
     }
     if (status !== undefined) {
-      updates.push(`status = $${paramCount++}`);
+      updates.push('status = $' + paramCount++);
       values.push(status);
     }
     
@@ -92,7 +92,7 @@ export async function PUT(request, { params }) {
       }, { status: 400 });
     }
     
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
     
     const result = await client.query(

@@ -1,0 +1,116 @@
+# XHETON Opening Stock - Quick Reference Card
+
+## Access
+- **URL**: `/inventory/opening-stock`
+- **Button**: GRN Page → "Opening Stock" (orange button)
+- **Keyboard**: Press Ctrl+K, type "Opening Stock"
+
+## Quick Start (Manual)
+```
+1. Select Warehouse
+2. Choose Product
+3. Enter Quantity
+4. Click "Add Item"
+5. Repeat steps 2-4 for more items
+6. Click "Create Opening Stock"
+7. Go to GRN page
+8. Click "Approve" on the draft GRN
+9. Stock now available!
+```
+
+## Quick Start (Bulk)
+```
+1. Prepare CSV file:
+   product_id, warehouse_id, quantity, batch_number, unit_cost, expiry_date
+2. Upload file
+3. Review preview
+4. Click "Import All Items"
+5. Check results (success/failed count)
+6. Approve GRNs from GRN page
+```
+
+## CSV Format Example
+```
+550e8400-e29b-41d4-a716-446655440000, 660e8400-e29b-41d4-a716-446655440001, 100, BATCH-001, 5000, 2026-12-31
+660e8400-e29b-41d4-a716-446655440002, 660e8400-e29b-41d4-a716-446655440001, 50, BATCH-002, 3000, 2026-06-30
+```
+
+## Key Points
+- ✅ Opening stock is internal GRN type
+- ✅ Must be **approved** to add stock
+- ✅ Can only set once per product-warehouse
+- ✅ Stock movements created automatically on approval
+- ✅ Full audit trail maintained
+- ✅ No manual stock editing allowed
+
+## Status Flow
+```
+draft (created) → approved (movements created) → [stock available]
+    ↑                                                    ↓
+    └────── can delete draft (undo) ─────────────────┘
+```
+
+## What Happens on Approval
+1. Creates stock movements for each item
+2. Movement type = 'receipt' (IN)
+3. From location = NULL (external)
+4. To location = selected warehouse
+5. Quantity = received quantity
+6. Stock instantly available in inventory
+
+## Common Errors
+| Error | Solution |
+|-------|----------|
+| "Warehouse is required" | Select a warehouse from dropdown |
+| "Quantity must be > 0" | Enter positive number |
+| "Opening stock already exists" | Cannot re-set approved stock, use transfers |
+| "File parsing failed" | Verify CSV format and column headers |
+| "Product not found" | Check product_id is valid UUID |
+
+## Related Pages
+- **GRN Management**: `/purchases/grn`
+- **Stock Movements**: `/inventory/movements`
+- **Warehouses**: `/warehouses`
+- **Products**: `/inventory/products/list`
+
+## Database Tables Involved
+- `goods_received_notes` (new fields: type, approved_at, approved_by, deleted_at)
+- `goods_received_note_items`
+- `stock_movements`
+- `suppliers` (auto-creates "Opening Stock" supplier)
+
+## Permissions
+- **Required**: Admin role
+- **Cannot**: Users cannot access opening stock page (role-based)
+
+## Performance
+- Manual: ~2-5 seconds per item
+- Bulk: ~1-2 seconds per 100 items
+- Large files (1000+ rows): 30-60 seconds
+
+## Troubleshooting
+
+### Stock not appearing after approval?
+1. Reload page (Ctrl+R)
+2. Check GRN status is "approved" (not "draft")
+3. Go to `/inventory/movements` and filter by opening_stock
+
+### Cannot delete opening stock?
+- Only draft GRNs can be deleted
+- Approved opening stock is permanent (intentional)
+- Cannot override to prevent audit trail corruption
+
+### Bulk import partially failed?
+- Check error messages in results table
+- Failed rows show specific error reason
+- Successful rows were created as separate GRNs
+- Fix and re-import failed rows
+
+### Warehouse not in dropdown?
+1. Check warehouse is created in `/warehouses`
+2. Verify warehouse is not deleted
+3. Refresh page
+
+---
+
+**XHETON** | Author: Xhenvolt | Opening Stock v1.0

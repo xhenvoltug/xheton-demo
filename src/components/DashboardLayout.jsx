@@ -44,7 +44,7 @@ const navigation = [
     items: [
       { name: 'Sales List', href: '/sales/list', icon: FileText },
       { name: 'Point of Sale', href: '/sales/pos', icon: CreditCard },
-      { name: 'Customers', href: '/customers', icon: Users },
+      { name: 'Customers', href: '/sales/customers/list', icon: Users },
       { name: 'Invoices', href: '/sales/invoices/list', icon: FileText },
     ]
   },
@@ -57,7 +57,7 @@ const navigation = [
       { name: 'Purchase Orders', href: '/purchases/orders', icon: ShoppingBag },
       { name: 'Supplier Invoices', href: '/purchases/invoices', icon: FileText },
       { name: 'Goods Received (GRN)', href: '/purchases/grn', icon: PackageCheck },
-      { name: 'Suppliers', href: '/suppliers', icon: Users },
+      { name: 'Suppliers', href: '/purchases/suppliers/list', icon: Users },
     ]
   },
   {
@@ -70,7 +70,7 @@ const navigation = [
       { name: 'Categories', href: '/inventory/categories/list', icon: Box },
       { name: 'Stock Movements', href: '/inventory/movements', icon: TrendingDown },
       { name: 'Warehouses', href: '/warehouses', icon: Warehouse },
-      { name: 'Price History', href: '/products/price-history', icon: TrendingUp },
+      { name: 'Price History', href: '/inventory/price-history', icon: TrendingUp },
       { name: 'Batches', href: '/inventory/batches/list', icon: PackageCheck },
     ]
   },

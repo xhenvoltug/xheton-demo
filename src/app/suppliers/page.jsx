@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -12,17 +12,33 @@ import StatusBadge from '@/components/core/StatusBadge';
 import { Plus, Download, Eye, Phone, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const mockSuppliers = [
-  { id: 'S001', name: 'ABC Suppliers Ltd', contact: 'James Mwangi', phone: '+254 711 222 333', email: 'james@abc.com', products: 'Electronics, Appliances', totalPurchases: 2400000, outstanding: 125000, status: 'Active' },
-  { id: 'S002', name: 'Tech Distributors', contact: 'Mary Wanjiru', phone: '+254 722 333 444', email: 'mary@tech.com', products: 'Computers, Accessories', totalPurchases: 1850000, outstanding: 0, status: 'Active' },
-  { id: 'S003', name: 'Global Imports', contact: 'Peter Ochieng', phone: '+254 733 444 555', email: 'peter@global.com', products: 'Furniture, Office Supplies', totalPurchases: 980000, outstanding: 45000, status: 'Active' },
-  { id: 'S004', name: 'Local Crafts Co', contact: 'Sarah Akinyi', phone: '+254 744 555 666', email: 'sarah@crafts.com', products: 'Handmade Items', totalPurchases: 450000, outstanding: 0, status: 'Inactive' },
-];
-
 export default function SuppliersPage() {
   const router = useRouter();
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        const res = await fetch('/api/purchases/suppliers/list');
+        const data = await res.json();
+        if (data.success) {
+          setSuppliers(data.suppliers);
+        } else {
+          setError(data.error);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSuppliers();
+  }, []);
 
   const columns = [
     { 
@@ -33,17 +49,17 @@ export default function SuppliersPage() {
           onClick={() => router.push(`/suppliers/${row.id}`)}
           className="font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
         >
-          {row.id}
+          {row.supplier_code || row.id}
         </button>
       )
     },
     { 
       header: 'Supplier Name',
-      accessor: 'name',
+      accessor: 'supplier_name',
       render: (row) => (
         <div>
-          <div className="font-semibold text-gray-900 dark:text-white">{row.name}</div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">{row.contact}</div>
+          <div className="font-semibold text-gray-900 dark:text-white">{row.supplier_name}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">{row.contact_person || ''}</div>
         </div>
       )
     },
@@ -63,31 +79,22 @@ export default function SuppliersPage() {
         </div>
       )
     },
-    { header: 'Products Supplied', accessor: 'products' },
+    { header: 'Payment Terms', accessor: 'payment_terms', render: (row) => `${row.payment_terms || 0} days` },
     { 
-      header: 'Total Purchases',
-      accessor: 'totalPurchases',
+      header: 'Credit Limit',
+      accessor: 'credit_limit',
       render: (row) => (
         <span className="font-semibold text-gray-900 dark:text-white">
-          UGX {row.totalPurchases.toLocaleString()}
-        </span>
-      )
-    },
-    { 
-      header: 'Outstanding Payables',
-      accessor: 'outstanding',
-      render: (row) => (
-        <span className={row.outstanding > 0 ? 'font-semibold text-red-600' : 'text-gray-600'}>
-          UGX {row.outstanding.toLocaleString()}
+          UGX {(row.credit_limit || 0).toLocaleString()}
         </span>
       )
     },
     { 
       header: 'Status',
-      accessor: 'status',
+      accessor: 'is_active',
       render: (row) => (
-        <StatusBadge variant={row.status === 'Active' ? 'success' : 'default'}>
-          {row.status}
+        <StatusBadge variant={row.is_active ? 'success' : 'default'}>
+          {row.is_active ? 'Active' : 'Inactive'}
         </StatusBadge>
       )
     },
@@ -107,13 +114,40 @@ export default function SuppliersPage() {
     }
   ];
 
-  const filteredData = mockSuppliers.filter(supplier => {
-    const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         supplier.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         supplier.phone.includes(searchTerm);
-    const matchesStatus = statusFilter === 'all' || supplier.status.toLowerCase() === statusFilter;
+  const filteredData = suppliers.filter(supplier => {
+    const matchesSearch = (supplier.supplier_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (supplier.supplier_code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (supplier.phone || '').includes(searchTerm);
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? supplier.is_active : !supplier.is_active);
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="xheton-page">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading suppliers...</p>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="xheton-page">
+          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-2xl p-6">
+            <p className="text-red-600 dark:text-red-400">Error loading suppliers: {error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -121,7 +155,7 @@ export default function SuppliersPage() {
         <PageHeader
           title="Suppliers"
           subtitle="Manage your supplier relationships and purchase history"
-          badge={<Badge variant="secondary">{mockSuppliers.length} Total</Badge>}
+          badge={<Badge variant="secondary">{suppliers.length} Total</Badge>}
           actions={[
             <Button
               key="export"
@@ -146,10 +180,10 @@ export default function SuppliersPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           {[
-            { label: 'Total Suppliers', value: mockSuppliers.length, color: 'from-blue-500 to-cyan-500' },
-            { label: 'Active', value: mockSuppliers.filter(s => s.status === 'Active').length, color: 'from-emerald-500 to-teal-500' },
-            { label: 'Total Payables', value: `UGX ${mockSuppliers.reduce((sum, s) => sum + s.outstanding, 0).toLocaleString()}`, color: 'from-red-500 to-rose-500' },
-            { label: 'Total Purchased', value: `UGX ${mockSuppliers.reduce((sum, s) => sum + s.totalPurchases, 0).toLocaleString()}`, color: 'from-purple-500 to-pink-500' }
+            { label: 'Total Suppliers', value: suppliers.length, color: 'from-blue-500 to-cyan-500' },
+            { label: 'Active', value: suppliers.filter(s => s.is_active).length, color: 'from-emerald-500 to-teal-500' },
+            { label: 'Payment Terms (Avg)', value: suppliers.length > 0 ? Math.round(suppliers.reduce((sum, s) => sum + (s.payment_terms || 0), 0) / suppliers.length) + ' days' : '0 days', color: 'from-orange-500 to-amber-500' },
+            { label: 'Total Credit Limit', value: `UGX ${suppliers.reduce((sum, s) => sum + (s.credit_limit || 0), 0).toLocaleString()}`, color: 'from-purple-500 to-pink-500' }
           ].map((stat, idx) => (
             <motion.div
               key={idx}

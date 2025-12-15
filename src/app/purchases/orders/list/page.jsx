@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -9,46 +9,8 @@ import DataTable from '@/components/shared/DataTable';
 import MobileCard from '@/components/shared/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Eye, Download } from 'lucide-react';
+import { Plus, Eye, Download, Loader2, ShoppingCart } from 'lucide-react';
 
-const mockOrders = [
-  {
-    id: 'PO-001',
-    supplier: 'Tech Supplies Co',
-    items: 12,
-    total: 45600.00,
-    status: 'approved',
-    date: '2025-12-06',
-    deliveryDate: '2025-12-10',
-  },
-  {
-    id: 'PO-002',
-    supplier: 'Global Electronics',
-    items: 8,
-    total: 32400.00,
-    status: 'pending',
-    date: '2025-12-05',
-    deliveryDate: '2025-12-12',
-  },
-  {
-    id: 'PO-003',
-    supplier: 'Office Mart',
-    items: 15,
-    total: 18900.00,
-    status: 'received',
-    date: '2025-12-04',
-    deliveryDate: '2025-12-08',
-  },
-  {
-    id: 'PO-004',
-    supplier: 'Hardware World',
-    items: 5,
-    total: 12300.00,
-    status: 'cancelled',
-    date: '2025-12-03',
-    deliveryDate: null,
-  },
-];
 
 const statusColors = {
   approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -59,32 +21,48 @@ const statusColors = {
 
 export default function PurchaseOrdersListPage() {
   const router = useRouter();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedRows, setSelectedRows] = useState([]);
 
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/purchases/orders/list');
+        if (!response.ok) throw new Error('Failed to load purchase orders');
+        const data = await response.json();
+        setOrders(data.data || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
   const columns = [
     {
       header: 'Order No',
-      accessor: 'id',
-      render: (row) => <span className="font-semibold text-gray-900 dark:text-white">{row.id}</span>,
+      accessor: 'po_number',
+      render: (row) => <span className="font-semibold text-gray-900 dark:text-white">{row.po_number}</span>,
     },
     {
       header: 'Supplier',
-      accessor: 'supplier',
-      render: (row) => <span className="text-gray-900 dark:text-white">{row.supplier}</span>,
-    },
-    {
-      header: 'Items',
-      accessor: 'items',
-      render: (row) => <span className="text-gray-600 dark:text-gray-400">{row.items} items</span>,
+      accessor: 'supplier_name',
+      render: (row) => <span className="text-gray-900 dark:text-white">{row.supplier_name}</span>,
     },
     {
       header: 'Total Amount',
-      accessor: 'total',
+      accessor: 'total_amount',
       render: (row) => (
         <span className="font-semibold text-gray-900 dark:text-white">
-          ${row.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          UGX {row.total_amount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
         </span>
       ),
     },
@@ -92,17 +70,17 @@ export default function PurchaseOrdersListPage() {
       header: 'Status',
       accessor: 'status',
       render: (row) => (
-        <Badge className={`${statusColors[row.status]} capitalize`}>
+        <Badge className={`${statusColors[row.status] || statusColors.pending} capitalize`}>
           {row.status}
         </Badge>
       ),
     },
     {
       header: 'Order Date',
-      accessor: 'date',
+      accessor: 'created_at',
       render: (row) => (
         <span className="text-gray-600 dark:text-gray-400">
-          {new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          {new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
       ),
     },
@@ -137,9 +115,9 @@ export default function PurchaseOrdersListPage() {
     },
   ];
 
-  const filteredData = mockOrders.filter((order) => {
-    const matchesSearch = order.supplier.toLowerCase().includes(searchValue.toLowerCase()) ||
-                         order.id.toLowerCase().includes(searchValue.toLowerCase());
+  const filteredData = orders.filter((order) => {
+    const matchesSearch = (order.supplier_name || '').toLowerCase().includes(searchValue.toLowerCase()) ||
+                         (order.po_number || '').toLowerCase().includes(searchValue.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -204,33 +182,57 @@ export default function PurchaseOrdersListPage() {
           </div>
         )}
 
-        {/* Desktop Table */}
-        <div className="hidden md:block">
-          <DataTable
-            columns={columns}
-            data={filteredData}
-            selectable
-            selectedRows={selectedRows}
-            onSelectRow={handleSelectRow}
-            onSelectAll={handleSelectAll}
-          />
-        </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+            <p className="text-gray-600 dark:text-gray-400">Loading purchase orders...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 text-red-600">
+            <p className="font-semibold mb-2">Error loading purchase orders</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <ShoppingCart className="h-12 w-12 text-gray-300 dark:text-gray-700 mb-3" />
+            <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">No purchase orders found</p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">Create your first purchase order to get started</p>
+            <Button onClick={() => router.push('/purchases/orders/new')} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create First Order
+            </Button>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block">
+              <DataTable
+                columns={columns}
+                data={filteredData}
+                selectable
+                selectedRows={selectedRows}
+                onSelectRow={handleSelectRow}
+                onSelectAll={handleSelectAll}
+              />
+            </div>
 
-        {/* Mobile Cards */}
-        <div className="md:hidden space-y-3">
-          {filteredData.map((order) => (
-            <MobileCard
-              key={order.id}
-              onClick={() => router.push(`/purchases/orders/${order.id}`)}
-              data={[
-                { label: 'Order', value: order.id },
-                { label: 'Supplier', value: order.supplier },
-                { label: 'Total', value: `$UGX {order.total.toLocaleString()}` },
-                { label: 'Status', value: <Badge className={statusColors[order.status]}>{order.status}</Badge> },
-              ]}
-            />
-          ))}
-        </div>
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3">
+              {filteredData.map((order) => (
+                <MobileCard
+                  key={order.id}
+                  onClick={() => router.push(`/purchases/orders/${order.id}`)}
+                  data={[
+                    { label: 'Order', value: order.po_number },
+                    { label: 'Supplier', value: order.supplier_name },
+                    { label: 'Total', value: `UGX ${order.total_amount.toLocaleString()}` },
+                    { label: 'Status', value: <Badge className={statusColors[order.status] || statusColors.pending}>{order.status}</Badge> },
+                  ]}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

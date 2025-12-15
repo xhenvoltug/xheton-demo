@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -9,56 +9,8 @@ import DataTable from '@/components/shared/DataTable';
 import MobileCard from '@/components/shared/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Download, Send } from 'lucide-react';
+import { Eye, Download, Send, Loader2, TrendingUp } from 'lucide-react';
 
-const mockInvoices = [
-  {
-    id: 'INV-001',
-    customer: 'Acme Corporation',
-    date: '2025-12-06',
-    dueDate: '2025-12-20',
-    items: 5,
-    subtotal: 11318.18,
-    tax: 1131.82,
-    total: 12450.00,
-    status: 'paid',
-    paidDate: '2025-12-08',
-  },
-  {
-    id: 'INV-002',
-    customer: 'TechStart Inc',
-    date: '2025-12-05',
-    dueDate: '2025-12-19',
-    items: 3,
-    subtotal: 8091.36,
-    tax: 809.14,
-    total: 8900.50,
-    status: 'pending',
-  },
-  {
-    id: 'INV-003',
-    customer: 'Global Traders',
-    date: '2025-12-04',
-    dueDate: '2025-12-18',
-    items: 8,
-    subtotal: 22272.73,
-    tax: 2227.27,
-    total: 24500.00,
-    status: 'paid',
-    paidDate: '2025-12-05',
-  },
-  {
-    id: 'INV-004',
-    customer: 'Metro Solutions',
-    date: '2025-11-28',
-    dueDate: '2025-12-12',
-    items: 2,
-    subtotal: 2909.09,
-    tax: 290.91,
-    total: 3200.00,
-    status: 'overdue',
-  },
-];
 
 const statusColors = {
   paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -68,8 +20,29 @@ const statusColors = {
 
 export default function InvoicesListPage() {
   const router = useRouter();
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/sales/invoices/list');
+        if (!response.ok) throw new Error('Failed to load sales invoices');
+        const data = await response.json();
+        setInvoices(data.data || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInvoices();
+  }, []);
 
   const columns = [
     {
@@ -81,35 +54,26 @@ export default function InvoicesListPage() {
     },
     {
       header: 'Customer',
-      accessor: 'customer',
+      accessor: 'customer_name',
       render: (row) => (
-        <span className="text-gray-700 dark:text-gray-300">{row.customer}</span>
+        <span className="text-gray-700 dark:text-gray-300">{row.customer_name}</span>
       ),
     },
     {
       header: 'Date',
-      accessor: 'date',
+      accessor: 'created_at',
       render: (row) => (
         <span className="text-gray-600 dark:text-gray-400">
-          {new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </span>
-      ),
-    },
-    {
-      header: 'Due Date',
-      accessor: 'dueDate',
-      render: (row) => (
-        <span className="text-gray-600 dark:text-gray-400">
-          {new Date(row.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          {new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
       ),
     },
     {
       header: 'Amount',
-      accessor: 'total',
+      accessor: 'total_amount',
       render: (row) => (
         <span className="font-semibold text-gray-900 dark:text-white">
-          ${row.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          UGX {row.total_amount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
         </span>
       ),
     },
@@ -117,7 +81,7 @@ export default function InvoicesListPage() {
       header: 'Status',
       accessor: 'status',
       render: (row) => (
-        <Badge className={`${statusColors[row.status]} capitalize`}>
+        <Badge className={`${statusColors[row.status] || statusColors.pending} capitalize`}>
           {row.status}
         </Badge>
       ),
@@ -160,9 +124,9 @@ export default function InvoicesListPage() {
     },
   ];
 
-  const filteredData = mockInvoices.filter((invoice) => {
-    const matchesSearch = invoice.customer.toLowerCase().includes(searchValue.toLowerCase()) ||
-                         invoice.id.toLowerCase().includes(searchValue.toLowerCase());
+  const filteredData = invoices.filter((invoice) => {
+    const matchesSearch = (invoice.customer_name || '').toLowerCase().includes(searchValue.toLowerCase()) ||
+                         (invoice.id || '').toLowerCase().includes(searchValue.toLowerCase());
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -197,30 +161,65 @@ export default function InvoicesListPage() {
 
         {/* Desktop Table */}
         <div className="hidden md:block">
-          <DataTable
-            columns={columns}
-            data={filteredData}
-          />
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">Loading sales invoices...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-red-600">
+              <p className="font-semibold mb-2">Error loading sales invoices</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <TrendingUp className="h-12 w-12 text-gray-300 dark:text-gray-700 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">No invoices found</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">Create your first sales invoice to get started</p>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={filteredData}
+            />
+          )}
         </div>
 
         {/* Mobile Cards */}
         <div className="md:hidden space-y-3">
-          {filteredData.map((invoice) => (
-            <MobileCard
-              key={invoice.id}
-              onClick={() => router.push(`/sales/invoices/${invoice.id}`)}
-              data={[
-                { label: 'Invoice', value: invoice.id },
-                { label: 'Customer', value: invoice.customer },
-                { label: 'Amount', value: `$${invoice.total.toLocaleString()}` },
-                { label: 'Due Date', value: new Date(invoice.dueDate).toLocaleDateString() },
-                {
-                  label: 'Status',
-                  value: <Badge className={statusColors[invoice.status]}>{invoice.status}</Badge>
-                },
-              ]}
-            />
-          ))}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">Loading sales invoices...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-red-600">
+              <p className="font-semibold mb-2">Error loading sales invoices</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <TrendingUp className="h-12 w-12 text-gray-300 dark:text-gray-700 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">No invoices found</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">Create your first sales invoice to get started</p>
+            </div>
+          ) : (
+            filteredData.map((invoice) => (
+              <MobileCard
+                key={invoice.id}
+                onClick={() => router.push(`/sales/invoices/${invoice.id}`)}
+                data={[
+                  { label: 'Invoice', value: invoice.id },
+                  { label: 'Customer', value: invoice.customer_name },
+                  { label: 'Amount', value: `UGX ${invoice.total_amount.toLocaleString()}` },
+                  {
+                    label: 'Status',
+                    value: <Badge className={statusColors[invoice.status] || statusColors.pending}>{invoice.status}</Badge>
+                  },
+                ]}
+              />
+            ))
+          )}
         </div>
       </div>
     </DashboardLayout>

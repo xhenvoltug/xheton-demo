@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -9,46 +9,7 @@ import DataTable from '@/components/shared/DataTable';
 import MobileCard from '@/components/shared/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Eye, Download } from 'lucide-react';
-
-const mockSuppliers = [
-  {
-    id: 'SUP-001',
-    name: 'Tech Supplies Co',
-    email: 'orders@techsupplies.com',
-    phone: '+1 234 567 8900',
-    totalPurchases: 125600.00,
-    outstanding: 15000.00,
-    status: 'active',
-  },
-  {
-    id: 'SUP-002',
-    name: 'Global Electronics',
-    email: 'info@globalelectronics.com',
-    phone: '+1 234 567 8901',
-    totalPurchases: 98400.00,
-    outstanding: 0.00,
-    status: 'active',
-  },
-  {
-    id: 'SUP-003',
-    name: 'Office Mart',
-    email: 'sales@officemart.com',
-    phone: '+1 234 567 8902',
-    totalPurchases: 45200.00,
-    outstanding: 8500.00,
-    status: 'active',
-  },
-  {
-    id: 'SUP-004',
-    name: 'Hardware World',
-    email: 'contact@hardwareworld.com',
-    phone: '+1 234 567 8903',
-    totalPurchases: 12300.00,
-    outstanding: 0.00,
-    status: 'inactive',
-  },
-];
+import { Plus, Eye, Download, Loader2, Building2 } from 'lucide-react';
 
 const statusColors = {
   active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -57,8 +18,29 @@ const statusColors = {
 
 export default function SuppliersListPage() {
   const router = useRouter();
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/purchases/suppliers/list');
+        if (!response.ok) throw new Error('Failed to load suppliers');
+        const data = await response.json();
+        setSuppliers(data.data || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSuppliers();
+  }, []);
 
   const columns = [
     {
@@ -79,21 +61,24 @@ export default function SuppliersListPage() {
     },
     {
       header: 'Total Purchases',
-      accessor: 'totalPurchases',
+      accessor: 'total_purchases',
       render: (row) => (
         <span className="font-semibold text-gray-900 dark:text-white">
-          ${row.totalPurchases.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          UGX {(row.total_purchases || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
         </span>
       ),
     },
     {
       header: 'Outstanding',
-      accessor: 'outstanding',
-      render: (row) => (
-        <span className={`font-semibold ${row.outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
-          ${row.outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-        </span>
-      ),
+      accessor: 'current_balance',
+      render: (row) => {
+        const balance = parseFloat(row.current_balance) || 0;
+        return (
+          <span className={`font-semibold ${balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
+            UGX {balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          </span>
+        );
+      },
     },
     {
       header: 'Status',
@@ -133,10 +118,10 @@ export default function SuppliersListPage() {
     },
   ];
 
-  const filteredData = mockSuppliers.filter((supplier) => {
-    const matchesSearch = supplier.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-                         supplier.email.toLowerCase().includes(searchValue.toLowerCase()) ||
-                         supplier.id.toLowerCase().includes(searchValue.toLowerCase());
+  const filteredData = suppliers.filter((supplier) => {
+    const matchesSearch = (supplier.supplier_name || '').toLowerCase().includes(searchValue.toLowerCase()) ||
+                         (supplier.email || '').toLowerCase().includes(searchValue.toLowerCase()) ||
+                         (supplier.id || '').toLowerCase().includes(searchValue.toLowerCase());
     const matchesStatus = statusFilter === 'all' || supplier.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -179,23 +164,59 @@ export default function SuppliersListPage() {
 
         {/* Desktop Table */}
         <div className="hidden md:block">
-          <DataTable columns={columns} data={filteredData} />
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">Loading suppliers...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-red-600">
+              <p className="font-semibold mb-2">Error loading suppliers</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Building2 className="h-12 w-12 text-gray-300 dark:text-gray-700 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">No suppliers found</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">Add your first supplier to get started</p>
+            </div>
+          ) : (
+            <DataTable columns={columns} data={filteredData} />
+          )}
         </div>
 
         {/* Mobile Cards */}
         <div className="md:hidden space-y-3">
-          {filteredData.map((supplier) => (
-            <MobileCard
-              key={supplier.id}
-              onClick={() => router.push(`/purchases/suppliers/${supplier.id}`)}
-              data={[
-                { label: 'ID', value: supplier.id },
-                { label: 'Name', value: supplier.name },
-                { label: 'Purchases', value: `$${supplier.totalPurchases.toLocaleString()}` },
-                { label: 'Status', value: <Badge className={statusColors[supplier.status]}>{supplier.status}</Badge> },
-              ]}
-            />
-          ))}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">Loading suppliers...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-red-600">
+              <p className="font-semibold mb-2">Error loading suppliers</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Building2 className="h-12 w-12 text-gray-300 dark:text-gray-700 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">No suppliers found</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">Add your first supplier to get started</p>
+            </div>
+          ) : (
+            filteredData.map((supplier) => (
+              <MobileCard
+                key={supplier.id}
+                onClick={() => router.push(`/purchases/suppliers/${supplier.id}`)}
+                data={[
+                  { label: 'ID', value: supplier.id },
+                  { label: 'Name', value: supplier.supplier_name },
+                  { label: 'Purchases', value: `UGX ${(supplier.total_purchases || 0).toLocaleString()}` },
+                  { label: 'Status', value: <Badge className={statusColors[supplier.status] || statusColors.active}>{supplier.status}</Badge> },
+                ]}
+              />
+            ))
+          )}
         </div>
       </div>
     </DashboardLayout>

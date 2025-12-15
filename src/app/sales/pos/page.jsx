@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -9,23 +9,13 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, Receipt } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, Smartphone, Receipt, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const categories = ['All', 'Electronics', 'Accessories', 'Office', 'Furniture'];
-
-const mockProducts = [
-  { id: 'P001', name: 'Laptop Pro 15"', price: 1299.99, category: 'Electronics', image: '💻', stock: 45 },
-  { id: 'P002', name: 'Wireless Mouse', price: 29.99, category: 'Accessories', image: '🖱️', stock: 120 },
-  { id: 'P003', name: 'USB-C Cable', price: 15.99, category: 'Accessories', image: '🔌', stock: 200 },
-  { id: 'P004', name: 'Monitor 27"', price: 349.99, category: 'Electronics', image: '🖥️', stock: 30 },
-  { id: 'P005', name: 'Keyboard Mechanical', price: 89.99, category: 'Accessories', image: '⌨️', stock: 67 },
-  { id: 'P006', name: 'Office Chair', price: 249.99, category: 'Furniture', image: '🪑', stock: 15 },
-  { id: 'P007', name: 'Desk Lamp', price: 45.99, category: 'Office', image: '💡', stock: 80 },
-  { id: 'P008', name: 'Notebook Set', price: 12.99, category: 'Office', image: '📓', stock: 150 },
-];
-
 export default function POSPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,11 +23,28 @@ export default function POSPage() {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
 
-  const filteredProducts = mockProducts.filter(product => {
-    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.id.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/inventory/products/list');
+        if (!res.ok) throw new Error('Failed to load products');
+        const json = await res.json();
+        setProducts(json.data || json || []);
+      } catch (err) {
+        setError(err.message);
+        toast.error('Failed to load products');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = (product.product_name || product.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (product.sku || product.id || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch && product.quantity > 0;
   });
 
   const addToCart = (product) => {
@@ -47,7 +54,7 @@ export default function POSPage() {
     } else {
       setCart([...cart, { ...product, quantity: 1 }]);
     }
-    toast.success(`${product.name} added to cart`);
+    toast.success(`${product.product_name || product.name} added to cart`);
   };
 
   const removeFromCart = (productId) => {
@@ -61,7 +68,7 @@ export default function POSPage() {
     ));
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cart.reduce((sum, item) => sum + ((item.selling_price || item.price) * item.quantity), 0);
   const tax = subtotal * 0.1; // 10% tax
   const total = subtotal + tax;
 
@@ -93,6 +100,27 @@ export default function POSPage() {
   };
 
   const change = (parseFloat(amountReceived) || 0) - total;
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading products...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900/30 dark:bg-red-900/10">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -151,18 +179,18 @@ export default function POSPage() {
                       >
                         <div className="text-center space-y-3">
                           <div className="text-5xl lg:text-6xl">
-                            {product.image}
+                            📦
                           </div>
                           <div>
                             <p className="font-semibold text-sm lg:text-base text-gray-900 dark:text-white line-clamp-2">
-                              {product.name}
+                              {product.product_name || product.name}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Stock: {product.stock}
+                              Stock: {product.quantity || product.stock || 0}
                             </p>
                           </div>
                           <p className="text-xl lg:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                            ${product.price}
+                            UGX {((product.selling_price || product.price || 0) * 1).toLocaleString()}
                           </p>
                         </div>
                       </Card>
@@ -216,14 +244,14 @@ export default function POSPage() {
                           <Card className="p-4 bg-gray-50 dark:bg-gray-800/50">
                             <div className="flex items-start gap-3">
                               <div className="text-3xl flex-shrink-0">
-                                {item.image}
+                                📦
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                                  {item.name}
+                                  {item.product_name || item.name}
                                 </p>
                                 <p className="text-emerald-600 dark:text-emerald-400 font-bold mt-1">
-                                  ${item.price}
+                                  UGX {((item.selling_price || item.price) * 1).toLocaleString()}
                                 </p>
                                 
                                 <div className="flex items-center gap-2 mt-3">

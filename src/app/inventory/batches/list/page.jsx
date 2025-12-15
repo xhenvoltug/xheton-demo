@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -8,42 +8,31 @@ import FilterBar from '@/components/shared/FilterBar';
 import DataTable from '@/components/shared/DataTable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye } from 'lucide-react';
-
-const mockBatches = [
-  {
-    id: 'BAT-001',
-    product: 'Laptop Pro 15"',
-    batchNumber: 'LP2025001',
-    quantity: 50,
-    remaining: 30,
-    expiryDate: '2026-12-31',
-    status: 'active',
-  },
-  {
-    id: 'BAT-002',
-    product: 'Wireless Mouse',
-    batchNumber: 'WM2025001',
-    quantity: 200,
-    remaining: 120,
-    expiryDate: '2027-06-30',
-    status: 'active',
-  },
-  {
-    id: 'BAT-003',
-    product: 'USB-C Cable',
-    batchNumber: 'UC2024012',
-    quantity: 300,
-    remaining: 8,
-    expiryDate: '2025-12-31',
-    status: 'expiring_soon',
-  },
-];
-
+import { Eye, Loader2, Package } from 'lucide-react';
 export default function BatchesListPage() {
   const router = useRouter();
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchBatches = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/inventory/batches/list');
+        if (!res.ok) throw new Error('Failed to load batches');
+        const json = await res.json();
+        setBatches(json.data || json || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBatches();
+  }, []);
 
   const columns = [
     {
@@ -118,12 +107,33 @@ export default function BatchesListPage() {
     },
   ];
 
-  const filteredData = mockBatches.filter((batch) => {
-    const matchesSearch = batch.product.toLowerCase().includes(searchValue.toLowerCase()) ||
-                         batch.batchNumber.toLowerCase().includes(searchValue.toLowerCase());
+  const filteredData = batches.filter((batch) => {
+    const matchesSearch = (batch.product_name || batch.product || '').toLowerCase().includes(searchValue.toLowerCase()) ||
+                         (batch.batch_number || batch.batchNumber || '').toLowerCase().includes(searchValue.toLowerCase());
     const matchesStatus = statusFilter === 'all' || batch.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading batches...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900/30 dark:bg-red-900/10">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

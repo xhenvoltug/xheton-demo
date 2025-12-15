@@ -16,35 +16,81 @@ import toast from 'react-hot-toast';
 export default function NewProductPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    name: '',
-    sku: '',
-    category: '',
+    product_name: '',
+    product_code: '',
+    category_id: '',
     description: '',
-    cost: '',
-    price: '',
-    initialStock: '',
-    minStock: '',
-    maxStock: '',
-    unit: '',
+    cost_price: '',
+    selling_price: '',
+    tax_rate: '',
+    unit_of_measure: '',
     barcode: '',
-    weight: '',
-    dimensions: '',
+    product_type: 'physical',
+    is_active: true,
+    is_taxable: false,
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.sku || !formData.category || !formData.price) {
+    if (!formData.product_name || !formData.product_code || !formData.selling_price) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    toast.success('Product created successfully!');
-    setTimeout(() => router.push('/inventory/products/list'), 1000);
+    setLoading(true);
+    try {
+      const payload = {
+        product_code: formData.product_code,
+        product_name: formData.product_name,
+        barcode: formData.barcode,
+        category_id: formData.category_id || null,
+        description: formData.description,
+        product_type: formData.product_type,
+        unit_of_measure: formData.unit_of_measure || 'piece',
+        cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
+        selling_price: parseFloat(formData.selling_price),
+        tax_rate: formData.tax_rate ? parseFloat(formData.tax_rate) : 0,
+        is_active: formData.is_active,
+        is_taxable: formData.is_taxable,
+        track_inventory: true,
+      };
+      
+      console.log('Sending product payload:', payload);
+      
+      const res = await fetch('/api/inventory/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      console.log('API Response:', data);
+
+      if (!res.ok) {
+        const errorMsg = data.error || data.message || 'Failed to create product';
+        console.error('API Error:', errorMsg);
+        toast.error(errorMsg);
+        setLoading(false);
+        return;
+      }
+
+      if (data.success) {
+        toast.success('Product created successfully!');
+        setTimeout(() => router.push('/inventory/products/list'), 1000);
+      } else {
+        toast.error(data.error || 'Product creation failed');
+      }
+    } catch (err) {
+      console.error('Product creation error:', err);
+      toast.error(err.message || 'Failed to create product');
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,42 +118,45 @@ export default function NewProductPage() {
             <FormCard title="Basic Information" description="Essential product details">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <Label htmlFor="name">Product Name *</Label>
+                  <Label htmlFor="product_name">Product Name *</Label>
                   <Input
-                    id="name"
+                    id="product_name"
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => handleChange('name', e.target.value)}
+                    value={formData.product_name}
+                    onChange={(e) => handleChange('product_name', e.target.value)}
                     placeholder="Enter product name"
                     className="mt-2"
                     required
+                    disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="sku">SKU *</Label>
+                  <Label htmlFor="product_code">Product Code *</Label>
                   <Input
-                    id="sku"
+                    id="product_code"
                     type="text"
-                    value={formData.sku}
-                    onChange={(e) => handleChange('sku', e.target.value)}
-                    placeholder="e.g., LP-PRO-15"
+                    value={formData.product_code}
+                    onChange={(e) => handleChange('product_code', e.target.value)}
+                    placeholder="e.g., PROD-001"
                     className="mt-2"
                     required
+                    disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleChange('category', value)}>
-                    <SelectTrigger id="category" className="mt-2">
+                  <Label htmlFor="category_id">Category</Label>
+                  <Select value={formData.category_id || "none"} onValueChange={(value) => handleChange('category_id', value === "none" ? null : value)}>
+                    <SelectTrigger id="category_id" className="mt-2" disabled={loading}>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Electronics">Electronics</SelectItem>
-                      <SelectItem value="Accessories">Accessories</SelectItem>
-                      <SelectItem value="Furniture">Furniture</SelectItem>
-                      <SelectItem value="Office">Office Supplies</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="electronics">Electronics</SelectItem>
+                      <SelectItem value="accessories">Accessories</SelectItem>
+                      <SelectItem value="furniture">Furniture</SelectItem>
+                      <SelectItem value="office">Office Supplies</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -121,6 +170,7 @@ export default function NewProductPage() {
                     placeholder="Describe the product..."
                     className="mt-2"
                     rows={4}
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -130,40 +180,71 @@ export default function NewProductPage() {
             <FormCard title="Pricing" description="Set cost and selling prices">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="cost">Cost Price</Label>
+                  <Label htmlFor="cost_price">Cost Price</Label>
                   <Input
-                    id="cost"
+                    id="cost_price"
                     type="number"
-                    value={formData.cost}
-                    onChange={(e) => handleChange('cost', e.target.value)}
+                    value={formData.cost_price}
+                    onChange={(e) => handleChange('cost_price', e.target.value)}
                     placeholder="0.00"
                     className="mt-2"
                     min="0"
                     step="0.01"
+                    disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="price">Selling Price *</Label>
+                  <Label htmlFor="selling_price">Selling Price *</Label>
                   <Input
-                    id="price"
+                    id="selling_price"
                     type="number"
-                    value={formData.price}
-                    onChange={(e) => handleChange('price', e.target.value)}
+                    value={formData.selling_price}
+                    onChange={(e) => handleChange('selling_price', e.target.value)}
                     placeholder="0.00"
                     className="mt-2"
                     min="0"
                     step="0.01"
                     required
+                    disabled={loading}
                   />
                 </div>
 
-                {formData.cost && formData.price && (
+                <div>
+                  <Label htmlFor="tax_rate">Tax Rate (%)</Label>
+                  <Input
+                    id="tax_rate"
+                    type="number"
+                    value={formData.tax_rate}
+                    onChange={(e) => handleChange('tax_rate', e.target.value)}
+                    placeholder="0"
+                    className="mt-2"
+                    min="0"
+                    step="0.01"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="product_type">Product Type</Label>
+                  <Select value={formData.product_type} onValueChange={(value) => handleChange('product_type', value)}>
+                    <SelectTrigger id="product_type" className="mt-2" disabled={loading}>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="physical">Physical</SelectItem>
+                      <SelectItem value="digital">Digital</SelectItem>
+                      <SelectItem value="service">Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.cost_price && formData.selling_price && (
                   <div className="md:col-span-2 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-700 dark:text-gray-300">Profit Margin</span>
                       <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                        {(((formData.price - formData.cost) / formData.price) * 100).toFixed(1)}%
+                        {(((formData.selling_price - formData.cost_price) / formData.selling_price) * 100).toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -171,52 +252,26 @@ export default function NewProductPage() {
               </div>
             </FormCard>
 
-            {/* Inventory */}
-            <FormCard title="Inventory" description="Stock levels and units">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Additional Details */}
+            <FormCard title="Additional Details" description="Barcode, unit of measure, and status">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="initialStock">Initial Stock</Label>
+                  <Label htmlFor="barcode">Barcode / EAN</Label>
                   <Input
-                    id="initialStock"
-                    type="number"
-                    value={formData.initialStock}
-                    onChange={(e) => handleChange('initialStock', e.target.value)}
-                    placeholder="0"
+                    id="barcode"
+                    type="text"
+                    value={formData.barcode}
+                    onChange={(e) => handleChange('barcode', e.target.value)}
+                    placeholder="Enter barcode number"
                     className="mt-2"
-                    min="0"
+                    disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="minStock">Minimum Stock Alert</Label>
-                  <Input
-                    id="minStock"
-                    type="number"
-                    value={formData.minStock}
-                    onChange={(e) => handleChange('minStock', e.target.value)}
-                    placeholder="10"
-                    className="mt-2"
-                    min="0"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="maxStock">Maximum Stock</Label>
-                  <Input
-                    id="maxStock"
-                    type="number"
-                    value={formData.maxStock}
-                    onChange={(e) => handleChange('maxStock', e.target.value)}
-                    placeholder="1000"
-                    className="mt-2"
-                    min="0"
-                  />
-                </div>
-
-                <div className="md:col-span-3">
-                  <Label htmlFor="unit">Unit of Measure</Label>
-                  <Select value={formData.unit} onValueChange={(value) => handleChange('unit', value)}>
-                    <SelectTrigger id="unit" className="mt-2">
+                  <Label htmlFor="unit_of_measure">Unit of Measure</Label>
+                  <Select value={formData.unit_of_measure} onValueChange={(value) => handleChange('unit_of_measure', value)}>
+                    <SelectTrigger id="unit_of_measure" className="mt-2" disabled={loading}>
                       <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
                     <SelectContent>
@@ -228,63 +283,33 @@ export default function NewProductPage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-            </FormCard>
 
-            {/* Additional Details */}
-            <FormCard title="Additional Details" description="Barcode, weight, and dimensions">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="barcode">Barcode / EAN</Label>
-                  <Input
-                    id="barcode"
-                    type="text"
-                    value={formData.barcode}
-                    onChange={(e) => handleChange('barcode', e.target.value)}
-                    placeholder="Enter barcode number"
-                    className="mt-2"
-                  />
+                  <Label htmlFor="is_taxable" className="flex items-center gap-2 cursor-pointer mt-2">
+                    <input
+                      id="is_taxable"
+                      type="checkbox"
+                      checked={formData.is_taxable}
+                      onChange={(e) => handleChange('is_taxable', e.target.checked)}
+                      disabled={loading}
+                      className="rounded"
+                    />
+                    <span>This product is taxable</span>
+                  </Label>
                 </div>
 
                 <div>
-                  <Label htmlFor="weight">Weight (kg)</Label>
-                  <Input
-                    id="weight"
-                    type="number"
-                    value={formData.weight}
-                    onChange={(e) => handleChange('weight', e.target.value)}
-                    placeholder="0.0"
-                    className="mt-2"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="dimensions">Dimensions (L × W × H)</Label>
-                  <Input
-                    id="dimensions"
-                    type="text"
-                    value={formData.dimensions}
-                    onChange={(e) => handleChange('dimensions', e.target.value)}
-                    placeholder="e.g., 30 × 20 × 10 cm"
-                    className="mt-2"
-                  />
-                </div>
-              </div>
-            </FormCard>
-
-            {/* Image Upload */}
-            <FormCard title="Product Image" description="Upload product photos">
-              <div className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-12 text-center hover:border-emerald-500 transition-colors cursor-pointer">
-                  <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-500">
-                    PNG, JPG up to 5MB
-                  </p>
+                  <Label htmlFor="is_active" className="flex items-center gap-2 cursor-pointer mt-2">
+                    <input
+                      id="is_active"
+                      type="checkbox"
+                      checked={formData.is_active}
+                      onChange={(e) => handleChange('is_active', e.target.checked)}
+                      disabled={loading}
+                      className="rounded"
+                    />
+                    <span>Product is active</span>
+                  </Label>
                 </div>
               </div>
             </FormCard>
@@ -295,15 +320,16 @@ export default function NewProductPage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.push('/inventory/products/list')}
+                disabled={loading}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                disabled={loading}
               >
-                <Save className="h-4 w-4 mr-2" />
-                Create Product
+                {loading ? 'Creating...' : (<><Save className="h-4 w-4 mr-2" />Create Product</>)}
               </Button>
             </div>
           </div>

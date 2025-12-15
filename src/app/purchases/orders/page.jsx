@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
 import DataTable from '@/components/shared/DataTable';
@@ -8,89 +8,113 @@ import FilterBar from '@/components/shared/FilterBar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import StatusBadge from '@/components/core/StatusBadge';
-import { Plus, Download, FileText, Eye } from 'lucide-react';
+import { Plus, Download, FileText, Eye, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
-const mockPurchaseOrders = [
-  { id: 'PO-001', supplier: 'ABC Suppliers Ltd', dateCreated: '2025-12-01', expectedDelivery: '2025-12-15', totalAmount: 250000, status: 'Sent', paymentsMade: 0 },
-  { id: 'PO-002', supplier: 'Tech Distributors', dateCreated: '2025-11-28', expectedDelivery: '2025-12-10', totalAmount: 185000, status: 'Partially Received', paymentsMade: 92500 },
-  { id: 'PO-003', supplier: 'Global Imports', dateCreated: '2025-11-25', expectedDelivery: '2025-12-05', totalAmount: 145000, status: 'Completed', paymentsMade: 145000 },
-  { id: 'PO-004', supplier: 'Office Supplies Co', dateCreated: '2025-12-05', expectedDelivery: '2025-12-20', totalAmount: 85000, status: 'Draft', paymentsMade: 0 },
-  { id: 'PO-005', supplier: 'Kenya Hardware Ltd', dateCreated: '2025-11-20', expectedDelivery: '2025-11-30', totalAmount: 320000, status: 'Cancelled', paymentsMade: 0 }
-];
-
 export default function PurchaseOrdersPage() {
   const router = useRouter();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const suppliers = ['all', ...new Set(mockPurchaseOrders.map(po => po.supplier))];
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/purchases/orders/list');
+        if (!res.ok) throw new Error('Failed to load orders');
+        const json = await res.json();
+        setOrders(json.data || json || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
-  const filteredPOs = mockPurchaseOrders.filter(po => {
-    const matchesSearch = po.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         po.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSupplier = supplierFilter === 'all' || po.supplier === supplierFilter;
-    const matchesStatus = statusFilter === 'all' || po.status.toLowerCase() === statusFilter;
+  const suppliers = ['all', ...new Set(orders.map(po => po.supplier_name || po.supplier || ''))];
+
+  const filteredPOs = orders.filter(po => {
+    const matchesSearch = (po.po_number || po.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (po.supplier_name || po.supplier || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSupplier = supplierFilter === 'all' || (po.supplier_name || po.supplier) === supplierFilter;
+    const matchesStatus = statusFilter === 'all' || (po.status || '').toLowerCase() === statusFilter;
     return matchesSearch && matchesSupplier && matchesStatus;
   });
 
-  const totalPOs = mockPurchaseOrders.length;
-  const totalAmount = mockPurchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0);
-  const completedPOs = mockPurchaseOrders.filter(po => po.status === 'Completed').length;
-  const approvedPOs = mockPurchaseOrders.filter(po => po.status === 'Sent' || po.status === 'Partially Received' || po.status === 'Completed').length;
-  const pendingAmount = mockPurchaseOrders.filter(po => po.status !== 'Completed' && po.status !== 'Cancelled').reduce((sum, po) => sum + po.totalAmount, 0);
+  const totalPOs = orders.length;
+  const totalAmount = orders.reduce((sum, po) => sum + (parseFloat(po.total_amount) || 0), 0);
+  const completedPOs = orders.filter(po => po.status === 'completed').length;
+  const approvedPOs = orders.filter(po => ['sent', 'partial', 'completed'].includes((po.status || '').toLowerCase())).length;
+  const pendingAmount = orders.filter(po => !['completed', 'cancelled'].includes((po.status || '').toLowerCase())).reduce((sum, po) => sum + (parseFloat(po.total_amount) || 0), 0);
 
   const getStatusVariant = (status) => {
     const map = {
-      'Draft': 'default',
-      'Sent': 'info',
-      'Partially Received': 'pending',
-      'Completed': 'success',
-      'Cancelled': 'error'
+      'draft': 'default',
+      'sent': 'info',
+      'partial': 'pending',
+      'completed': 'success',
+      'cancelled': 'error'
     };
-    return map[status] || 'default';
+    return map[(status || '').toLowerCase()] || 'default';
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading purchase orders...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900/30 dark:bg-red-900/10">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const columns = [
     { 
       header: 'PO Number', 
-      accessor: 'id',
+      accessor: 'po_number',
       render: (row) => (
         <span 
           className="font-mono text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
           onClick={() => router.push(`/purchases/orders/${row.id}`)}
         >
-          {row.id}
+          {row.po_number || row.id}
         </span>
       )
     },
     { 
       header: 'Supplier', 
-      accessor: 'supplier',
-      render: (row) => <span className="font-semibold text-gray-900 dark:text-white">{row.supplier}</span>
+      accessor: 'supplier_name',
+      render: (row) => <span className="font-semibold text-gray-900 dark:text-white">{row.supplier_name || row.supplier}</span>
     },
-    { header: 'Date Created', accessor: 'dateCreated' },
-    { header: 'Expected Delivery', accessor: 'expectedDelivery' },
+    { header: 'Date Created', accessor: 'created_at' },
+    { header: 'Status', accessor: 'status' },
     { 
       header: 'Total Amount', 
-      accessor: 'totalAmount',
-      render: (row) => <span className="font-bold text-gray-900 dark:text-white">UGX {row.totalAmount.toLocaleString()}</span>
+      accessor: 'total_amount',
+      render: (row) => <span className="font-bold text-gray-900 dark:text-white">UGX {(parseFloat(row.total_amount) || 0).toLocaleString()}</span>
     },
     { 
-      header: 'Payments Made', 
-      accessor: 'paymentsMade',
-      render: (row) => (
-        <span className={row.paymentsMade > 0 ? 'font-semibold text-emerald-600' : 'text-gray-500'}>
-          UGX {row.paymentsMade.toLocaleString()}
-        </span>
-      )
-    },
-    { 
-      header: 'Status', 
-      accessor: 'status',
-      render: (row) => <StatusBadge variant={getStatusVariant(row.status)}>{row.status}</StatusBadge>
+      header: 'Status Badge', 
+      accessor: 'status_badge',
+      render: (row) => <StatusBadge variant={getStatusVariant(row.status)}>{row.status || 'pending'}</StatusBadge>
     },
     { 
       header: 'Actions', 

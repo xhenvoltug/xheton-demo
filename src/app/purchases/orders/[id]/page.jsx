@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -10,36 +10,35 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Download, Send, Printer, Package, DollarSign, Calendar, TrendingUp } from 'lucide-react';
+import { FileText, Download, Send, Printer, Package, DollarSign, Calendar, TrendingUp, Loader2 } from 'lucide-react';
 
-const mockOrderDetails = {
-  'PO-001': {
-    id: 'PO-001',
-    supplier: {
-      name: 'Tech Supplies Co',
-      email: 'orders@techsupplies.com',
-      phone: '+1 234 567 8900',
-      address: '123 Tech Avenue, Silicon Valley, CA 94025',
-    },
-    orderDate: '2025-12-06',
-    deliveryDate: '2025-12-10',
-    status: 'approved',
-    items: [
-      { id: 1, name: 'Laptop Pro 15"', sku: 'LAP-001', quantity: 5, cost: 899.99, total: 4499.95 },
-      { id: 2, name: 'Wireless Mouse', sku: 'MOU-002', quantity: 10, cost: 12.99, total: 129.90 },
-      { id: 3, name: 'Monitor 27"', sku: 'MON-003', quantity: 3, cost: 249.99, total: 749.97 },
-    ],
-    subtotal: 5379.82,
-    tax: 537.98,
-    total: 5917.80,
-    notes: 'Please ensure all items are properly packaged. Delivery to main warehouse.',
-  },
-};
 
 export default function PurchaseOrderDetailPage({ params }) {
   const { id } = use(params);
   const router = useRouter();
-  const order = mockOrderDetails[id] || mockOrderDetails['PO-001'];
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/purchases/orders/${id}`);
+        if (!response.ok) throw new Error('Failed to load purchase order');
+        const data = await response.json();
+        setOrder(data.data || data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchOrder();
+    }
+  }, [id]);
 
   const statusColors = {
     approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -48,12 +47,35 @@ export default function PurchaseOrderDetailPage({ params }) {
     cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   };
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+          <p className="text-gray-600 dark:text-gray-400">Loading purchase order details...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20 text-red-600">
+          <p className="font-semibold mb-2">Error loading purchase order</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{error || 'Order not found'}</p>
+          <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="xheton-page">
         <PageHeader
-          title={`Purchase Order ${order.id}`}
-          subtitle={`Supplier: ${order.supplier.name}`}
+          title={`Purchase Order ${order.po_number || order.id}`}
+          subtitle={`Supplier: ${order.supplier_name || 'Unknown'}`}
           actions={[
             <Button key="print" variant="outline" className="gap-2">
               <Printer className="h-4 w-4" />
@@ -74,20 +96,20 @@ export default function PurchaseOrderDetailPage({ params }) {
           <StatCard
             icon={DollarSign}
             label="Total Amount"
-            value={`$UGX {order.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            value={`UGX ${order.total_amount.toLocaleString('en-US', { minimumFractionDigits: 0 })}`}
             trend={{ value: 12.5, isPositive: true }}
             iconColor="emerald"
           />
           <StatCard
             icon={Package}
-            label="Total Items"
-            value={order.items.reduce((sum, item) => sum + item.quantity, 0)}
+            label="Status"
+            value={order.status}
             iconColor="blue"
           />
           <StatCard
             icon={Calendar}
-            label="Delivery Date"
-            value={new Date(order.deliveryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            label="Order Date"
+            value={new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             iconColor="purple"
           />
           <StatCard

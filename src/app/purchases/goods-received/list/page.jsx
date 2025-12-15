@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -9,35 +9,7 @@ import DataTable from '@/components/shared/DataTable';
 import MobileCard from '@/components/shared/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Eye, Download } from 'lucide-react';
-
-const mockGRNs = [
-  {
-    id: 'GRN-001',
-    poNumber: 'PO-001',
-    supplier: 'Tech Supplies Co',
-    items: 12,
-    receivedDate: '2025-12-10',
-    status: 'completed',
-    receivedBy: 'John Smith',
-  },
-  {
-    id: 'GRN-002',
-    poNumber: 'PO-002',
-    supplier: 'Global Electronics',
-    items: 8,
-    receivedDate: '2025-12-11',
-    status: 'partial',
-    receivedBy: 'Sarah Johnson',
-  },
-  {
-    id: 'GRN-003',
-    poNumber: 'PO-003',
-    supplier: 'Office Mart',
-    items: 15,
-    receivedDate: '2025-12-09',
-    status: 'completed',
-    receivedBy: 'Mike Davis',
+import { Plus, Eye, Download, Loader2, Package } from 'lucide-react';
   },
 ];
 
@@ -49,8 +21,28 @@ const statusColors = {
 
 export default function GoodsReceivedListPage() {
   const router = useRouter();
+  const [grns, setGrns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchGrns = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/purchases/goods-received/list');
+        if (!res.ok) throw new Error('Failed to load GRNs');
+        const json = await res.json();
+        setGrns(json.data || json || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGrns();
+  }, []);
 
   const columns = [
     {
@@ -133,13 +125,34 @@ export default function GoodsReceivedListPage() {
     },
   ];
 
-  const filteredData = mockGRNs.filter((grn) => {
-    const matchesSearch = grn.supplier.toLowerCase().includes(searchValue.toLowerCase()) ||
-                         grn.id.toLowerCase().includes(searchValue.toLowerCase()) ||
-                         grn.poNumber.toLowerCase().includes(searchValue.toLowerCase());
+  const filteredData = grns.filter((grn) => {
+    const matchesSearch = (grn.supplier_name || grn.supplier || '').toLowerCase().includes(searchValue.toLowerCase()) ||
+                         (grn.id || '').toLowerCase().includes(searchValue.toLowerCase()) ||
+                         (grn.po_number || '').toLowerCase().includes(searchValue.toLowerCase());
     const matchesStatus = statusFilter === 'all' || grn.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading goods received notes...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900/30 dark:bg-red-900/10">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

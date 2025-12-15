@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -10,34 +10,57 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, ShoppingCart, TrendingUp, FileText, Mail, Phone, MapPin, Edit } from 'lucide-react';
-
-const mockSupplierDetails = {
-  'SUP-001': {
-    id: 'SUP-001',
-    name: 'Tech Supplies Co',
-    email: 'orders@techsupplies.com',
-    phone: '+1 234 567 8900',
-    address: '123 Tech Avenue, Silicon Valley, CA 94025',
-    taxId: 'XX-1234567',
-    paymentTerms: 'Net 30 Days',
-    creditLimit: 50000.00,
-    totalPurchases: 125600.00,
-    outstanding: 15000.00,
-    status: 'active',
-    purchaseOrders: [
-      { id: 'PO-001', date: '2025-12-06', items: 12, total: 45600.00, status: 'approved' },
-      { id: 'PO-005', date: '2025-12-01', items: 8, total: 32400.00, status: 'received' },
-      { id: 'PO-008', date: '2025-11-28', items: 15, total: 47600.00, status: 'received' },
-    ],
-    outstandingInvoices: [
-      { id: 'INV-001', date: '2025-12-03', amount: 15000.00, dueDate: '2026-01-02' },
-    ],
-  },
-};
+import { DollarSign, ShoppingCart, TrendingUp, FileText, Mail, Phone, MapPin, Edit, Loader2 } from 'lucide-react';
 
 export default function SupplierDetailPage({ params }) {
   const { id } = use(params);
+  const router = useRouter();
+  const [supplier, setSupplier] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSupplier = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/purchases/suppliers/${id}`);
+        if (!response.ok) throw new Error('Failed to load supplier');
+        const data = await response.json();
+        setSupplier(data.data || data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchSupplier();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+          <p className="text-gray-600 dark:text-gray-400">Loading supplier details...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !supplier) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20 text-red-600">
+          <p className="font-semibold mb-2">Error loading supplier</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{error || 'Supplier not found'}</p>
+          <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
   const router = useRouter();
   const supplier = mockSupplierDetails[id] || mockSupplierDetails['SUP-001'];
 
@@ -165,26 +188,26 @@ export default function SupplierDetailPage({ params }) {
           <StatCard
             icon={DollarSign}
             label="Total Purchases"
-            value={`$${supplier.totalPurchases.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            value={`UGX ${parseFloat(supplier.total_purchases || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
             trend={{ value: 15.2, isPositive: true }}
             iconColor="emerald"
           />
           <StatCard
             icon={FileText}
             label="Outstanding"
-            value={`$${supplier.outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            value={`UGX ${parseFloat(supplier.current_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
             iconColor="red"
           />
           <StatCard
             icon={ShoppingCart}
             label="Total Orders"
-            value={supplier.purchaseOrders.length}
+            value={supplier.total_orders || 0}
             iconColor="blue"
           />
           <StatCard
             icon={TrendingUp}
             label="Status"
-            value={<Badge className={statusColors[supplier.status]}>{supplier.status}</Badge>}
+            value={<Badge className={supplier.is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'}>{supplier.is_active ? 'Active' : 'Inactive'}</Badge>}
             iconColor="purple"
           />
         </div>

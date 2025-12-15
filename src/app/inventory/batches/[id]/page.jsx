@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
 import StatCard from '@/components/shared/StatCard';
@@ -8,32 +8,54 @@ import DataTable from '@/components/shared/DataTable';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Package, TrendingDown, Calendar, AlertTriangle } from 'lucide-react';
-
-const mockBatch = {
-  id: 'BAT-001',
-  product: 'Laptop Pro 15"',
-  batchNumber: 'LP2025001',
-  quantity: 50,
-  remaining: 30,
-  manufactureDate: '2025-01-15',
-  expiryDate: '2026-12-31',
-  supplier: 'Tech Supplies Co',
-  status: 'active',
-};
-
-const movementHistory = [
-  { id: 1, date: '2025-12-06', type: 'Sale', reference: 'INV-001', quantity: 3, balance: 30 },
-  { id: 2, date: '2025-11-28', type: 'Sale', reference: 'INV-015', quantity: 5, balance: 33 },
-  { id: 3, date: '2025-11-15', type: 'Transfer', reference: 'TRF-005', quantity: 10, balance: 38 },
-  { id: 4, date: '2025-01-20', type: 'Received', reference: 'PO-045', quantity: 50, balance: 50 },
-];
+import { Edit, Package, TrendingDown, Calendar, AlertTriangle, Loader2 } from 'lucide-react';
 
 export default function BatchDetailPage({ params }) {
   const { id } = use(params);
+  const [batch, setBatch] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchBatch = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/inventory/batches/${id}`);
+        if (!res.ok) throw new Error('Batch not found');
+        const json = await res.json();
+        setBatch(json.data || json);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBatch();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading batch...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !batch) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900/30 dark:bg-red-900/10">
+          <p className="text-red-600 dark:text-red-400">{error || 'Batch not found'}</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const daysUntilExpiry = Math.floor(
-    (new Date(mockBatch.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)
+    (new Date(batch.expiry_date || batch.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)
   );
 
   return (

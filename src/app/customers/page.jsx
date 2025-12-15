@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/shared/PageHeader';
@@ -12,19 +12,34 @@ import StatusBadge from '@/components/core/StatusBadge';
 import { Plus, Download, Trash2, Eye, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const mockCustomers = [
-  { id: 'C001', name: 'John Kamau', phone: '+254 700 111 222', email: 'john@example.com', address: 'Nairobi CBD', creditBalance: 15000, totalPurchases: 450000, status: 'Active', type: 'Frequent' },
-  { id: 'C002', name: 'Mary Wanjiru', phone: '+254 700 333 444', email: 'mary@example.com', address: 'Westlands', creditBalance: 0, totalPurchases: 280000, status: 'Active', type: 'Regular' },
-  { id: 'C003', name: 'James Ochieng', phone: '+254 700 555 666', email: 'james@example.com', address: 'Mombasa', creditBalance: 45000, totalPurchases: 890000, status: 'Active', type: 'Debtor' },
-  { id: 'C004', name: 'Sarah Akinyi', phone: '+254 700 777 888', email: 'sarah@example.com', address: 'Kisumu', creditBalance: 8000, totalPurchases: 120000, status: 'Inactive', type: 'Regular' },
-  { id: 'C005', name: 'Peter Mwangi', phone: '+254 700 999 000', email: 'peter@example.com', address: 'Nakuru', creditBalance: 0, totalPurchases: 650000, status: 'Active', type: 'Frequent' },
-];
-
 export default function CustomersPage() {
   const router = useRouter();
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch('/api/sales/customers');
+        const data = await res.json();
+        if (data.success) {
+          setCustomers(data.customers);
+        } else {
+          setError(data.error);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
 
   const columns = [
     { 
@@ -35,16 +50,16 @@ export default function CustomersPage() {
           onClick={() => router.push(`/customers/${row.id}`)}
           className="font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
         >
-          {row.id}
+          {row.customer_code || row.id}
         </button>
       )
     },
     { 
       header: 'Name',
-      accessor: 'name',
+      accessor: 'customer_name',
       render: (row) => (
         <div>
-          <div className="font-semibold text-gray-900 dark:text-white">{row.name}</div>
+          <div className="font-semibold text-gray-900 dark:text-white">{row.customer_name}</div>
           <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2 mt-1">
             <Phone className="h-3 w-3" />
             {row.phone}
@@ -58,35 +73,17 @@ export default function CustomersPage() {
       render: (row) => (
         <div className="flex items-center gap-2">
           <Mail className="h-4 w-4 text-gray-400" />
-          <span className="text-sm">{row.email}</span>
+          <span className="text-sm">{row.email || '-'}</span>
         </div>
       )
     },
-    { header: 'Address', accessor: 'address' },
-    { 
-      header: 'Credit Balance',
-      accessor: 'creditBalance',
-      render: (row) => (
-        <span className={row.creditBalance > 0 ? 'font-semibold text-red-600' : 'text-gray-600'}>
-          UGX {row.creditBalance.toLocaleString()}
-        </span>
-      )
-    },
-    { 
-      header: 'Total Purchases',
-      accessor: 'totalPurchases',
-      render: (row) => (
-        <span className="font-semibold text-gray-900 dark:text-white">
-          UGX {row.totalPurchases.toLocaleString()}
-        </span>
-      )
-    },
+    { header: 'Address', accessor: 'address', render: (row) => row.address || row.city || '-' },
     { 
       header: 'Status',
-      accessor: 'status',
+      accessor: 'is_active',
       render: (row) => (
-        <StatusBadge variant={row.status === 'Active' ? 'success' : 'default'}>
-          {row.status}
+        <StatusBadge variant={row.is_active ? 'success' : 'default'}>
+          {row.is_active ? 'Active' : 'Inactive'}
         </StatusBadge>
       )
     },
@@ -108,18 +105,44 @@ export default function CustomersPage() {
     }
   ];
 
-  const filteredData = mockCustomers.filter(customer => {
-    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.phone.includes(searchTerm) ||
-                         customer.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || customer.status.toLowerCase() === statusFilter;
-    const matchesType = typeFilter === 'all' || customer.type.toLowerCase() === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
+  const filteredData = customers.filter(customer => {
+    const matchesSearch = (customer.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (customer.phone || '').includes(searchTerm) ||
+                         (customer.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? customer.is_active : !customer.is_active);
+    return matchesSearch && matchesStatus;
   });
 
   const handleExportCSV = () => {
     alert('Exporting customers to CSV...');
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="xheton-page">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading customers...</p>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="xheton-page">
+          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-2xl p-6">
+            <p className="text-red-600 dark:text-red-400">Error loading customers: {error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -127,7 +150,7 @@ export default function CustomersPage() {
         <PageHeader
           title="Customers"
           subtitle="Manage your customer database and relationships"
-          badge={<Badge variant="secondary">{mockCustomers.length} Total</Badge>}
+          badge={<Badge variant="secondary">{customers.length} Total</Badge>}
           actions={[
             <Button
               key="export"
@@ -152,10 +175,10 @@ export default function CustomersPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           {[
-            { label: 'Total Customers', value: mockCustomers.length, color: 'from-blue-500 to-cyan-500' },
-            { label: 'Active', value: mockCustomers.filter(c => c.status === 'Active').length, color: 'from-emerald-500 to-teal-500' },
-            { label: 'Debtors', value: mockCustomers.filter(c => c.creditBalance > 0).length, color: 'from-amber-500 to-orange-500' },
-            { label: 'Total Credit', value: `UGX ${mockCustomers.reduce((sum, c) => sum + c.creditBalance, 0).toLocaleString()}`, color: 'from-red-500 to-rose-500' }
+            { label: 'Total Customers', value: customers.length, color: 'from-blue-500 to-cyan-500' },
+            { label: 'Active', value: customers.filter(c => c.is_active).length, color: 'from-emerald-500 to-teal-500' },
+            { label: 'Inactive', value: customers.filter(c => !c.is_active).length, color: 'from-amber-500 to-orange-500' },
+            { label: 'Total Count', value: customers.length > 0 ? (customers.length).toLocaleString() : '0', color: 'from-purple-500 to-pink-500' }
           ].map((stat, idx) => (
             <motion.div
               key={idx}

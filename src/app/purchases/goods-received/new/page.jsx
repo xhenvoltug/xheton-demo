@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -13,41 +13,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle, Save, X } from 'lucide-react';
+import { AlertCircle, Save, X, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const mockPurchaseOrders = [
-  {
-    id: 'PO-001',
-    supplier: 'Tech Supplies Co',
-    items: [
-      { id: 1, name: 'Laptop Pro 15"', sku: 'LAP-001', ordered: 5, received: 0 },
-      { id: 2, name: 'Wireless Mouse', sku: 'MOU-002', ordered: 10, received: 0 },
-      { id: 3, name: 'Monitor 27"', sku: 'MON-003', ordered: 3, received: 0 },
-    ],
-  },
-  {
-    id: 'PO-002',
-    supplier: 'Global Electronics',
-    items: [
-      { id: 4, name: 'Keyboard Mechanical', sku: 'KEY-004', ordered: 8, received: 0 },
-      { id: 5, name: 'USB Cable', sku: 'CAB-005', ordered: 20, received: 0 },
-    ],
-  },
-];
 
 export default function NewGoodsReceivedPage() {
   const router = useRouter();
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [loadingPos, setLoadingPos] = useState(true);
   const [poNumber, setPoNumber] = useState('');
   const [selectedPO, setSelectedPO] = useState(null);
   const [receivedItems, setReceivedItems] = useState([]);
   const [notes, setNotes] = useState('');
 
+  useEffect(() => {
+    const fetchPOs = async () => {
+      try {
+        setLoadingPos(true);
+        const res = await fetch('/api/purchases/orders/list');
+        if (!res.ok) throw new Error('Failed to load POs');
+        const json = await res.json();
+        setPurchaseOrders(json.data || json || []);
+      } catch (err) {
+        toast.error('Failed to load purchase orders');
+      } finally {
+        setLoadingPos(false);
+      }
+    };
+    fetchPOs();
+  }, []);
+
   const handlePOSelect = (value) => {
     setPoNumber(value);
-    const po = mockPurchaseOrders.find(p => p.id === value);
+    const po = purchaseOrders.find(p => p.id === value);
     setSelectedPO(po);
-    setReceivedItems(po ? po.items.map(item => ({
+    setReceivedItems(po ? (po.items || []).map(item => ({
       ...item,
       receivedQty: 0,
       damaged: 0,
@@ -116,14 +115,14 @@ export default function NewGoodsReceivedPage() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="poNumber">Select Purchase Order *</Label>
-                  <Select value={poNumber} onValueChange={handlePOSelect}>
+                  <Select value={poNumber} onValueChange={handlePOSelect} disabled={loadingPos}>
                     <SelectTrigger id="poNumber" className="mt-2">
-                      <SelectValue placeholder="Choose PO to receive" />
+                      <SelectValue placeholder={loadingPos ? "Loading POs..." : "Choose PO to receive"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockPurchaseOrders.map((po) => (
+                      {purchaseOrders.map((po) => (
                         <SelectItem key={po.id} value={po.id}>
-                          {po.id} - {po.supplier}
+                          {po.po_number || po.id} - {po.supplier_name || po.supplier}
                         </SelectItem>
                       ))}
                     </SelectContent>

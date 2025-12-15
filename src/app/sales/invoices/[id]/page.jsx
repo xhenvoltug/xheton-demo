@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -9,39 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Download, Send, Printer, Edit, Check } from 'lucide-react';
+import { Download, Send, Printer, Edit, Check, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-// Mock invoice data
-const mockInvoice = {
-  id: 'INV-001',
-  date: '2025-12-06',
-  dueDate: '2025-12-20',
-  status: 'paid',
-  paidDate: '2025-12-08',
-  customer: {
-    name: 'Acme Corporation',
-    email: 'contact@acme.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Business Ave, Suite 500',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10001',
-  },
-  items: [
-    { id: 1, name: 'Laptop Pro 15"', sku: 'P001', quantity: 3, price: 1299.99, total: 3899.97 },
-    { id: 2, name: 'Wireless Mouse', sku: 'P002', quantity: 5, price: 29.99, total: 149.95 },
-    { id: 3, name: 'Monitor 27"', sku: 'P004', quantity: 6, price: 349.99, total: 2099.94 },
-    { id: 4, name: 'Keyboard Mechanical', sku: 'P005', quantity: 5, price: 89.99, total: 449.95 },
-    { id: 5, name: 'USB-C Cable', sku: 'P003', quantity: 10, price: 15.99, total: 159.90 },
-  ],
-  subtotal: 6759.71,
-  discount: 0,
-  tax: 675.97,
-  total: 7435.68,
-  notes: 'Thank you for your business!',
-  paymentMethod: 'Bank Transfer',
-};
 
 const statusColors = {
   paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -52,6 +21,29 @@ const statusColors = {
 export default function InvoiceDetailPage({ params }) {
   const { id } = use(params);
   const router = useRouter();
+  const [invoice, setInvoice] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchInvoice = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/sales/invoices/${id}`);
+        if (!response.ok) throw new Error('Failed to load invoice');
+        const data = await response.json();
+        setInvoice(data.data || data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchInvoice();
+    }
+  }, [id]);
 
   const handleDownloadPDF = () => {
     toast.success('Downloading invoice PDF...');
@@ -65,12 +57,35 @@ export default function InvoiceDetailPage({ params }) {
     window.print();
   };
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+          <p className="text-gray-600 dark:text-gray-400">Loading invoice details...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !invoice) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20 text-red-600">
+          <p className="font-semibold mb-2">Error loading invoice</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{error || 'Invoice not found'}</p>
+          <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="xheton-page">
         <PageHeader
-          title={`Invoice ${mockInvoice.id}`}
-          subtitle={`Created on ${new Date(mockInvoice.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`}
+          title={`Invoice ${invoice.id}`}
+          subtitle={`Created on ${new Date(invoice.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`}
           actions={[
             <Button
               key="edit"

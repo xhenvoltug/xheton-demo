@@ -25,18 +25,19 @@ export async function GET(request) {
         u.id,
         u.email,
         u.username,
-        u.full_name,
+        u.first_name,
+        u.last_name,
         u.phone,
         u.role_id,
+        u.branch_id,
         u.is_active,
         u.created_at,
         u.last_login_at,
         bi.business_name,
-        bi.default_branch_id,
         b.branch_name as default_branch_name
       FROM users u
       LEFT JOIN business_info bi ON bi.created_by = u.id
-      LEFT JOIN branches b ON b.id = bi.default_branch_id
+      LEFT JOIN branches b ON b.id = u.branch_id
       WHERE u.id = $1
       LIMIT 1
     `, [user.userId]);
@@ -59,9 +60,9 @@ export async function GET(request) {
         fullName: userData.full_name,
         phone: userData.phone,
         roleId: userData.role_id,
+        branchId: userData.branch_id,
         isActive: userData.is_active,
         businessName: userData.business_name,
-        defaultBranchId: userData.default_branch_id,
         defaultBranchName: userData.default_branch_name,
         createdAt: userData.created_at,
         lastLoginAt: userData.last_login_at,
