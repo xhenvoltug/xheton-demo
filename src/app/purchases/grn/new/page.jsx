@@ -64,8 +64,6 @@ export default function NewGRNPage() {
         } else {
           console.error('Products API error:', prodRes.status);
         }
-          console.error('Products error details:', errorData);
-        }
       } catch (err) {
         console.error('Error fetching data:', err);
         toast.error('Failed to load data');
